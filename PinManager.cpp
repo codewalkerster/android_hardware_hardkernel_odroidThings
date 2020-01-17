@@ -51,17 +51,24 @@ PinManager::PinManager(){
 }
 
 void PinManager::init() {
-    wiringPiSetup();
-
     if (board == "odroidn2") {
         pinList = (pin_t*)n2_pin_support_list;
         i2cList = (i2c_t*)n2_i2c_support_list;
+    } else {
+        ALOGD("Board is not initialized");
+        return;
     }
+
+    wiringPiSetup();
     initPwm();
 }
 
 std::vector<pin_t> PinManager::getPinList() {
     std::vector<pin_t> list;
+    if (!pinList) {
+        ALOGD("Board is not initialized");
+        return list;
+    }
 
     for (int i=0; i<PIN_MAX; i++)
         list.push_back(pinList[i]);
@@ -70,6 +77,10 @@ std::vector<pin_t> PinManager::getPinList() {
 
 std::vector<string> PinManager::getPinNameList() {
     std::vector<string> list;
+    if (!pinList) {
+        ALOGD("Board is not initialized");
+        return list;
+    }
 
     for (int i=0; i<PIN_MAX; i++)
         list.push_back(pinList[i].name);
@@ -78,6 +89,11 @@ std::vector<string> PinManager::getPinNameList() {
 
 std::vector<string> PinManager::getListOf(int mode) {
     std::vector<string> list;
+    if (!pinList) {
+        ALOGD("Board is not initialized");
+        return list;
+    }
+
     switch (mode) {
         case PIN_GPIO:
             for (int i=0; i<PIN_MAX; i++) {
@@ -162,6 +178,7 @@ void PinManager::setEdgeTriggerType(int idx, int edgeTriggerType) {
             break;
         case EDGE_BOTH:
             triggerType[pin] = INT_EDGE_BOTH;
+            break;
     }
 }
 
