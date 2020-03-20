@@ -36,7 +36,36 @@ static const pin_t n2_pin_support_list[PIN_MAX] = {
     {"GND", -1, PIN_GND}, {"AIN1", 29, PIN_AIN},
 };
 
+static const pin_t c4_pin_support_list[PIN_MAX] = {
+    {"", -1, 0},
+    {"3.3V", -1, PIN_PWR}, {"5V", -1, PIN_PWR},
+    {"3", 8, PIN_I2C}, {"5V", -1, PIN_PWR},
+    {"5", 9, PIN_I2C}, {"GND", -1, PIN_GND},
+    {"7", 7, PIN_GPIO}, {"8", 15, PIN_UART},
+    {"GND", -1, PIN_GND}, {"10", 16, PIN_UART},
+    {"11", 0, PIN_GPIO}, {"12", 1, PIN_GPIO|PIN_PWM},
+    {"13", 2, PIN_GPIO}, {"GND", -1, PIN_GND},
+    {"15", 3, PIN_GPIO|PIN_PWM}, {"16", 4, PIN_GPIO},
+    {"3.3V", -1, PIN_PWR}, {"18", 5, PIN_GPIO},
+    {"19", 12, PIN_GPIO}, {"GND", -1, PIN_GND},
+    {"21", 13, PIN_GPIO}, {"22", 6, PIN_GPIO},
+    {"23", 14, PIN_GPIO}, {"24", 10, PIN_GPIO},
+    {"25", -1, PIN_GND}, {"26", 11, PIN_GPIO},
+    {"27", 30, PIN_I2C}, {"28", 31, PIN_I2C},
+    {"29", 21, PIN_GPIO}, {"GND", -1, PIN_GND},
+    {"31", 22, PIN_GPIO}, {"32", 26, PIN_GPIO},
+    {"33", 23, PIN_GPIO|PIN_PWM}, {"GND", -1, PIN_GND},
+    {"35", 24, PIN_GPIO|PIN_PWM}, {"36", 27, PIN_GPIO},
+    {"AIN3", 25, PIN_AIN}, {"1.8V", 28, PIN_PWR},
+    {"GND", -1, PIN_GND}, {"AIN4", 29, PIN_AIN},
+};
+
 static const i2c_t n2_i2c_support_list[I2C_MAX] = {
+    {"I2C-2", "/dev/i2c-2"},
+    {"I2C-3", "/dev/i2c-3"},
+};
+
+static const i2c_t c4_i2c_support_list[I2C_MAX] = {
     {"I2C-2", "/dev/i2c-2"},
     {"I2C-3", "/dev/i2c-3"},
 };
@@ -54,6 +83,9 @@ void PinManager::init() {
     if (board == "odroidn2") {
         pinList = (pin_t*)n2_pin_support_list;
         i2cList = (i2c_t*)n2_i2c_support_list;
+    } else if (board == "odroidc4") {
+        pinList = (pin_t*)c4_pin_support_list;
+        i2cList = (i2c_t*)c4_i2c_support_list;
     } else {
         ALOGD("Board is not initialized");
         return;
@@ -210,6 +242,15 @@ void PinManager::initPwm() {
         initPwmState(23, 4, 0);
         // #35
         initPwmState(24, 4, 1);
+    } else if (board == "odroidc4") {
+        // #12
+        initPwmState(1, 4, 0);
+        // #15
+        initPwmState(3, 4, 1);
+        // #33
+        initPwmState(23, 0, 0);
+        // #35
+        initPwmState(24, 0, 1);
     }
 }
 
