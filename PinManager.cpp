@@ -70,6 +70,20 @@ static const i2c_t c4_i2c_support_list[I2C_MAX] = {
     {"I2C-3", "/dev/i2c-3"},
 };
 
+static const pwm_t n2_pwm_support_list[PWM_MAX] = {
+    {1, 8, 0}, // Pin #12
+    {3, 8 ,1}, // Pin #15
+    {23, 4, 0}, // Pin #33
+    {24, 4, 1}, // Pin #35
+};
+
+static const pwm_t c4_pwm_support_list[PWM_MAX] = {
+    {1, 4, 0}, // Pin #12
+    {3, 4 ,1}, // Pin #15
+    {23, 0, 0}, // Pin #33
+    {24, 0, 1}, // Pin #35
+};
+
 PinManager::PinManager(){
     char boardName[PROPERTY_VALUE_MAX];
 
@@ -83,9 +97,11 @@ void PinManager::init() {
     if (board == "odroidn2") {
         pinList = (pin_t*)n2_pin_support_list;
         i2cList = (i2c_t*)n2_i2c_support_list;
+        pwmList = (pwm_t*)n2_pwm_support_list;
     } else if (board == "odroidc4") {
         pinList = (pin_t*)c4_pin_support_list;
         i2cList = (i2c_t*)c4_i2c_support_list;
+        pwmList = (pwm_t*)c4_pwm_support_list;
     } else {
         ALOGD("Board is not initialized");
         return;
@@ -228,34 +244,14 @@ void PinManager::unregisterCallback(int idx) {
 //TODO: reduce pwm array size to fit the pwm number.
 
 void PinManager::initPwm() {
-    for (int i=0; i<PIN_MAX; i++) {
-        if ((pinList[i].availableModes & PIN_PWM) == PIN_PWM)
-            pwm.insert(std::make_pair(pinList[i].pin, new pwmState()));
-    }
-
-    if (board == "odroidn2") {
-        // #12
-        initPwmState(1, 8, 0);
-        // #15
-        initPwmState(3, 8, 1);
-        // #33
-        initPwmState(23, 4, 0);
-        // #35
-        initPwmState(24, 4, 1);
-    } else if (board == "odroidc4") {
-        // #12
-        initPwmState(1, 4, 0);
-        // #15
-        initPwmState(3, 4, 1);
-        // #33
-        initPwmState(23, 0, 0);
-        // #35
-        initPwmState(24, 0, 1);
+    for (int i=0; i<PWM_MAX; i++) {
+        auto pin = pwmList[i];
+        initPwmState(pin.index, pin.chip, pin.line);
     }
 }
 
 void PinManager::initPwmState(int idx, uint8_t chip, uint8_t node) {
-    const auto state = pwm.find(idx)->second;
+    const auto state = new pwmState();
     // init chip & node info
     state->chip = chip;
     state->node = node;
@@ -270,6 +266,8 @@ void PinManager::initPwmState(int idx, uint8_t chip, uint8_t node) {
     state->periodPath =  pwmRootStr + "period";
     state->dutyCyclePath = pwmRootStr + "duty_cycle";
     state->enablePath = pwmRootStr + "enable";
+
+    pwm.insert(std::make_pair(idx, state));
 }
 
 inline void PinManager::writeSysfsTo(const string path, const string value) {
