@@ -26,13 +26,15 @@
 #include <fstream>
 #include <string>
 
+#include "Uart.h"
+
 #define BOARD_PROPERTY "ro.product.device"
 
 using hardware::hardkernel::odroidthings::pin_t;
 using hardware::hardkernel::odroidthings::i2c_t;
 using hardware::hardkernel::odroidthings::pwm_t;
+using hardware::hardkernel::odroidthings::uart_t;
 using hardware::hardkernel::odroidthings::function_t;
-using std::string;
 
 struct pwmState{
     unsigned int period;
@@ -48,10 +50,11 @@ struct pwmState{
 
 class PinManager {
     private:
-        string board;
+        std::string board;
         pin_t *pinList;
         i2c_t *i2cList;
         pwm_t *pwmList;
+        uart_t *uartList;
         int triggerType[PIN_MAX] = {INT_EDGE_SETUP,};
         std::map<int, pwmState *> pwm;
         std::map<int, int> i2c;
@@ -60,7 +63,7 @@ class PinManager {
 
         // helper function
         void initPwmState(int idx, uint8_t chip, uint8_t node);
-        void writeSysfsTo(const string path, const string value);
+        void writeSysfsTo(const std::string path, const std::string value);
 
         enum ActiveType {
             ACTIVE_LOW,
@@ -78,8 +81,8 @@ class PinManager {
         std::vector<pin_t> getPinList();
 
         // common
-        std::vector<string> getPinNameList();
-        std::vector<string> getListOf(int);
+        std::vector<std::string> getPinNameList();
+        std::vector<std::string> getListOf(int);
 
         // gpio
         bool getValue(int);
@@ -102,6 +105,9 @@ class PinManager {
         void closeI2c(int);
         std::vector<uint8_t> readRegBufferI2c(int, uint32_t, int);
         Result writeRegBufferI2c(int, uint32_t, std::vector<uint8_t>, int);
+
+        // uart
+        std::unique_ptr<Uart> getUart();
 };
 
 #endif /* PIN_MANAGER_H */

@@ -1,3 +1,21 @@
+/*
+ *    Copyright (c) 2020 Sangchul Go <luke.go@hardkernel.com>
+ *
+ *    OdroidThings is free software: you can redistribute it and/or modify
+ *    it under the terms of the GNU Lesser General Public License as
+ *    published by the Free Software Foundation, either version 3 of the
+ *    License, or (at your option) any later version.
+ *
+ *    OdroidThings is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *    GNU Lesser General Public License for more details.
+ *
+ *    You should have received a copy of the GNU Lesser General Public
+ *    License along with OdroidThings.
+ *    If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <wiringPi/wiringPi.h>
 #include <cutils/properties.h>
 #include <hardware/odroidThings.h>
@@ -84,6 +102,14 @@ static const pwm_t c4_pwm_support_list[PWM_MAX] = {
     {24, 0, 1}, // Pin #35
 };
 
+static const uart_t n2_uart_support_list[UART_MAX] = {
+    {"UART-1", "/dev/ttyS1"}, // #8, #10
+};
+
+static const uart_t c4_uart_support_list[UART_MAX] = {
+    {"UART-1", "/dev/ttyS1"}, // #8, #10
+};
+
 PinManager::PinManager(){
     char boardName[PROPERTY_VALUE_MAX];
 
@@ -98,10 +124,12 @@ void PinManager::init() {
         pinList = (pin_t*)n2_pin_support_list;
         i2cList = (i2c_t*)n2_i2c_support_list;
         pwmList = (pwm_t*)n2_pwm_support_list;
+        uartList = (uart_t*)n2_uart_support_list;
     } else if (board == "odroidc4") {
         pinList = (pin_t*)c4_pin_support_list;
         i2cList = (i2c_t*)c4_i2c_support_list;
         pwmList = (pwm_t*)c4_pwm_support_list;
+        uartList = (uart_t*)c4_uart_support_list;
     } else {
         ALOGD("Board is not initialized");
         return;
@@ -123,8 +151,8 @@ std::vector<pin_t> PinManager::getPinList() {
     return list;
 }
 
-std::vector<string> PinManager::getPinNameList() {
-    std::vector<string> list;
+std::vector<std::string> PinManager::getPinNameList() {
+    std::vector<std::string> list;
     if (!pinList) {
         ALOGD("Board is not initialized");
         return list;
@@ -135,8 +163,8 @@ std::vector<string> PinManager::getPinNameList() {
     return list;
 }
 
-std::vector<string> PinManager::getListOf(int mode) {
-    std::vector<string> list;
+std::vector<std::string> PinManager::getListOf(int mode) {
+    std::vector<std::string> list;
     if (!pinList) {
         ALOGD("Board is not initialized");
         return list;
@@ -261,7 +289,7 @@ void PinManager::initPwmState(int idx, uint8_t chip, uint8_t node) {
 
     pwmRoot << "/sys/class/pwm/pwmchip" << std::to_string(state->chip)
         << "/pwm" << std::to_string(state->node) <<"/";
-    string pwmRootStr = pwmRoot.str();
+	std::string pwmRootStr = pwmRoot.str();
 
     state->periodPath =  pwmRootStr + "period";
     state->dutyCyclePath = pwmRootStr + "duty_cycle";
@@ -270,7 +298,7 @@ void PinManager::initPwmState(int idx, uint8_t chip, uint8_t node) {
     pwm.insert(std::make_pair(idx, state));
 }
 
-inline void PinManager::writeSysfsTo(const string path, const string value) {
+inline void PinManager::writeSysfsTo(const std::string path, const std::string value) {
     std::ofstream file(path);
     file << value;
     file.close();
@@ -387,4 +415,9 @@ Result PinManager::writeRegBufferI2c(int idx, uint32_t reg, std::vector<uint8_t>
     delete[] msg;
 
     return Result::OK;
+}
+
+std::unique_ptr<Uart> PinManager::getUart() {
+    auto uart = std::make_unique<Uart>(uartList);
+    return uart;
 }

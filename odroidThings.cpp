@@ -26,16 +26,19 @@
 #include <vector>
 #include <memory>
 #include "PinManager.h"
+#include "Uart.h"
 
 using hardware::hardkernel::odroidthings::things_device_t;
 using hardware::hardkernel::odroidthings::things_module_t;
 
 static android::Mutex thingsLock;
 static std::unique_ptr<PinManager> gPinManager;
+static std::unique_ptr<Uart> gUart;
 
 static void things_init() {
     gPinManager = std::make_unique<PinManager>();
     gPinManager->init();
+    gUart = gPinManager->getUart();
 }
 
 static const std::vector<pin_t> things_getPinList() {
@@ -47,6 +50,11 @@ static const std::vector<std::string> things_getPinNameList() {
 }
 
 static const std::vector<std::string> things_getListOf(int mode) {
+    switch (mode) {
+        case PIN_UART:
+            return gUart->getList();
+            break;
+    }
     return gPinManager->getListOf(mode);
 }
 
@@ -125,6 +133,58 @@ static Result things_i2c_writeRegBuffer(int idx, uint32_t reg, std::vector<uint8
     return gPinManager->writeRegBufferI2c(idx, reg, buffer, length);
 }
 
+static void things_uart_open(int idx) {
+    gUart->open(idx);
+}
+
+static void things_uart_close(int idx) {
+    gUart->close(idx);
+}
+
+static bool things_uart_flush(int idx, int direction) {
+    return gUart->flush(idx, direction);
+}
+
+static bool things_uart_sendBreak(int idx, int duration) {
+    return gUart->sendBreak(idx, duration);
+}
+
+static bool things_uart_setBaudrate(int idx, int baudrate) {
+    return gUart->setBaudrate(idx, baudrate);
+}
+
+static bool things_uart_setDataSize(int idx, int size) {
+    return gUart->setDataSize(idx, size);
+}
+
+static bool things_uart_setHardwareFlowControl(int idx, int mode) {
+    return gUart->setHardwareFlowControl(idx, mode);
+}
+
+static bool things_uart_setParity(int idx, int mode) {
+    return gUart->setParity(idx, mode);
+}
+
+static bool things_uart_setStopBits(int idx, int bits) {
+    return gUart->setStopBits(idx, bits);
+}
+
+static const std::vector<uint8_t> things_uart_read(int idx, int length) {
+    return gUart->read(idx, length);
+}
+
+static ssize_t things_uart_write(int idx, std::vector<uint8_t> buffer, int length) {
+    return gUart->write(idx, buffer, length);
+}
+
+static void things_uart_registerCallback(int idx, function_t callback) {
+    //gUart->registerCallback(idx, callback);
+}
+
+static void things_uart_unregisterCallback(int idx) {
+    //gUart->unregisterCallback(idx);
+}
+
 static int things_open(const hw_module_t *module, const char __unused *id,
         struct hw_device_t **device) {
     android::Mutex::Autolock lock(thingsLock);
@@ -165,7 +225,23 @@ static int things_open(const hw_module_t *module, const char __unused *id,
     dev->i2c_ops.close = things_i2c_close;
     dev->i2c_ops.readRegBuffer = things_i2c_readRegBuffer;
     dev->i2c_ops.writeRegBuffer = things_i2c_writeRegBuffer;
-    //dev->spi_ops.
+
+    // Modem Control feature will not be supported.
+    dev->uart_ops.open = things_uart_open;
+    dev->uart_ops.close = things_uart_close;
+    dev->uart_ops.flush = things_uart_flush;
+    dev->uart_ops.sendBreak = things_uart_sendBreak;
+    dev->uart_ops.setBaudrate = things_uart_setBaudrate;
+    dev->uart_ops.setDataSize = things_uart_setDataSize;
+    dev->uart_ops.setHardwareFlowControl = things_uart_setHardwareFlowControl;
+    dev->uart_ops.setParity = things_uart_setParity;
+    dev->uart_ops.setStopBits = things_uart_setStopBits;
+    dev->uart_ops.read = things_uart_read;
+    dev->uart_ops.write = things_uart_write;
+
+    // The callback feature is not supported yet.
+    dev->uart_ops.registerCallback = things_uart_registerCallback;
+    dev->uart_ops.unregisterCallback = things_uart_unregisterCallback;
 
     *device = &dev->common;
 

@@ -22,6 +22,7 @@ cc_library_shared {
     srcs: [
         "odroidThings.cpp",
         "PinManager.cpp",
+        "Uart.cpp",
     ],
 
     include_dirs: [
