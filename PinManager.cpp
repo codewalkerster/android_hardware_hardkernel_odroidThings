@@ -135,7 +135,11 @@ void PinManager::init() {
         return;
     }
 
-    wiringPiSetup();
+    if (wiringPiSetup()) {
+        ALOGD("Board is not initialized");
+        return;
+    }
+
     initPwm();
 }
 
