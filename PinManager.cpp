@@ -79,13 +79,13 @@ static const pin_t c4_pin_support_list[PIN_MAX] = {
 };
 
 static const i2c_t n2_i2c_support_list[I2C_MAX] = {
-    {"I2C-1", "/dev/i2c-1"},
-    {"I2C-2", "/dev/i2c-2"},
+    {"I2C-1", "/dev/i2c-0"},
+    {"I2C-2", "/dev/i2c-1"},
 };
 
 static const i2c_t c4_i2c_support_list[I2C_MAX] = {
-    {"I2C-1", "/dev/i2c-1"},
-    {"I2C-2", "/dev/i2c-2"},
+    {"I2C-1", "/dev/i2c-0"},
+    {"I2C-2", "/dev/i2c-1"},
 };
 
 static const pwm_t n2_pwm_support_list[PWM_MAX] = {
