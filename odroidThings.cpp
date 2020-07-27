@@ -34,11 +34,13 @@ using hardware::hardkernel::odroidthings::things_module_t;
 static android::Mutex thingsLock;
 static std::unique_ptr<PinManager> gPinManager;
 static std::unique_ptr<Uart> gUart;
+static std::unique_ptr<Spi> gSpi;
 
 static void things_init() {
     gPinManager = std::make_unique<PinManager>();
     gPinManager->init();
     gUart = gPinManager->getUart();
+    gSpi = gPinManager->getSpi();
 }
 
 static const std::vector<pin_t> things_getPinList() {
@@ -53,6 +55,9 @@ static const std::vector<std::string> things_getListOf(int mode) {
     switch (mode) {
         case PIN_UART:
             return gUart->getList();
+            break;
+        case PIN_SPI:
+            return gSpi->getList();
             break;
     }
     return gPinManager->getListOf(mode);
@@ -185,6 +190,115 @@ static void things_uart_unregisterCallback(int idx) {
     //gUart->unregisterCallback(idx);
 }
 
+static void things_spi_open(int idx) {
+    gSpi->open(idx);
+}
+
+static void things_spi_close(int idx) {
+    gSpi->close(idx);
+}
+
+static bool things_spi_setBitJustification(int idx, uint8_t bit) {
+    int ret = gSpi->setBitJustification(idx, bit);
+    if (ret < 0) {
+        ALOGE("Failed to set bit justification(%d)", ret);
+        return false;
+    }
+    return true;
+}
+
+static bool things_spi_setBitsPerWord(int idx, uint8_t bit) {
+    int ret = gSpi->setBitsPerWord(idx, bit);
+
+    if (ret < 0) {
+        ALOGE("Failed to set bit per word(%d)", ret);
+        return false;
+    }
+    return true;
+}
+
+static bool things_spi_setMode(int idx, uint8_t mode) {
+    int ret = gSpi->setMode(idx, mode);
+
+    if (ret < 0) {
+        ALOGE("Failed to set mode(%d)", ret);
+        return false;
+    }
+    return true;
+}
+
+static bool things_spi_setCsChange(int idx, bool cs) {
+    int ret = gSpi->setCsChange(idx, cs);
+
+    if (ret < 0) {
+        ALOGE("Failed to change cs(%d)", ret);
+        return false;
+    }
+    return true;
+}
+
+static bool things_spi_setDelay(int idx, uint16_t delay) {
+    int ret = gSpi->setDelay(idx, delay);
+
+    if (ret < 0) {
+        ALOGE("Failed to set delay");
+        return false;
+    }
+    return true;
+}
+
+static bool things_spi_setFrequency(int idx, uint32_t frequency) {
+    int ret = gSpi->setFrequency(idx, frequency);
+
+    if (ret < 0) {
+        ALOGE("Failed to set frequency(%x)", ret);
+        return false;
+    }
+    return true;
+}
+
+static const std::vector<uint8_t> things_spi_transfer(int idx, std::vector<uint8_t> txBuffer, int length) {
+    uint8_t * txArray = &txBuffer[0];
+    std::vector<uint8_t> rxBuffer(length);
+    uint8_t * rxArray = &rxBuffer[0];
+
+    int ret = gSpi->transfer(idx, txArray, rxArray, length);
+
+    if (ret < 0) {
+        ALOGE("transfer is failed(%d)", ret);
+        return rxBuffer;
+    }
+
+    return rxBuffer;
+}
+
+static bool things_spi_write(int idx, std::vector<uint8_t> txBuffer, int length) {
+
+    uint8_t *txArray = &txBuffer[0];
+
+    int ret = gSpi->transfer(idx, txArray, NULL, length);
+
+    if (ret < 0) {
+        ALOGE("write is failed(%d)", ret);
+        return false;
+    }
+
+    return true;
+}
+
+static const std::vector<uint8_t> things_spi_read(int idx, int length) {
+    std::vector<uint8_t> rxBuffer(length);
+
+    int ret = gSpi->transfer(idx, NULL, &rxBuffer[0], length);
+
+    if (ret < 0) {
+        ALOGE("read spi is failed(%d)", ret);
+        return rxBuffer;
+    }
+
+    return rxBuffer;
+}
+
 static int things_open(const hw_module_t *module, const char __unused *id,
         struct hw_device_t **device) {
     android::Mutex::Autolock lock(thingsLock);
@@ -242,6 +356,18 @@ static int things_open(const hw_module_t *module, const char __unused *id,
     // The callback feature is not supported yet.
     dev->uart_ops.registerCallback = things_uart_registerCallback;
     dev->uart_ops.unregisterCallback = things_uart_unregisterCallback;
+
+    dev->spi_ops.open = things_spi_open;
+    dev->spi_ops.close = things_spi_close;
+    dev->spi_ops.setBitJustification = things_spi_setBitJustification;
+    dev->spi_ops.setBitsPerWord = things_spi_setBitsPerWord;
+    dev->spi_ops.setMode = things_spi_setMode;
+    dev->spi_ops.setCsChange = things_spi_setCsChange;
+    dev->spi_ops.setDelay = things_spi_setDelay;
+    dev->spi_ops.setFrequency = things_spi_setFrequency;
+    dev->spi_ops.transfer = things_spi_transfer;
+    dev->spi_ops.write = things_spi_write;
+    dev->spi_ops.read = things_spi_read;
 
     *device = &dev->common;
 

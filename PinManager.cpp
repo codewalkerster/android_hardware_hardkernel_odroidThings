@@ -110,6 +110,14 @@ static const uart_t c4_uart_support_list[UART_MAX] = {
     {"UART-1", "/dev/ttyS1"}, // #8, #10
 };
 
+static const spi_t n2_spi_support_list[SPI_MAX] = {
+	{"SPI0.0", "/dev/spidev0.0"},
+};
+
+static const spi_t c4_spi_support_list[SPI_MAX] = {
+	{"SPI0.0", "/dev/spidev0.0"},
+};
+
 PinManager::PinManager(){
     char boardName[PROPERTY_VALUE_MAX];
 
@@ -125,11 +133,13 @@ void PinManager::init() {
         i2cList = (i2c_t*)n2_i2c_support_list;
         pwmList = (pwm_t*)n2_pwm_support_list;
         uartList = (uart_t*)n2_uart_support_list;
+        spiList = (spi_t*)n2_spi_support_list;
     } else if (board == "odroidc4") {
         pinList = (pin_t*)c4_pin_support_list;
         i2cList = (i2c_t*)c4_i2c_support_list;
         pwmList = (pwm_t*)c4_pwm_support_list;
         uartList = (uart_t*)c4_uart_support_list;
+        spiList = (spi_t*)c4_spi_support_list;
     } else {
         ALOGD("Board is not initialized");
         return;
@@ -424,4 +434,9 @@ Result PinManager::writeRegBufferI2c(int idx, uint32_t reg, std::vector<uint8_t>
 std::unique_ptr<Uart> PinManager::getUart() {
     auto uart = std::make_unique<Uart>(uartList);
     return uart;
+}
+
+std::unique_ptr<Spi> PinManager::getSpi() {
+    auto spi = std::make_unique<Spi>(spiList);
+    return spi;
 }
