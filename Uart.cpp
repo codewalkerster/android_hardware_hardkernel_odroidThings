@@ -110,12 +110,12 @@ bool Uart::sendBreak(const int index,const int duration) {
 }
 
 bool Uart::setBaudrate(const int index, const int baudrate) {
-    auto state= uart.find(index)->second;
+    auto iterator = uart.find(index);
     uint32_t baud = getBaudrate(baudrate);
 
-    cfsetospeed(&state.option, baud);
-    cfsetispeed(&state.option, baud);
-    tcsetattr(state.fd, TCSANOW, &state.option);
+    cfsetospeed(&(iterator->second.option), baud);
+    cfsetispeed(&(iterator->second.option), baud);
+    tcsetattr(iterator->second.fd, TCSANOW, &(iterator->second.option));
     return true;
 }
 
@@ -190,86 +190,86 @@ uint32_t Uart::getBaudrate(int baudrate) {
 }
 
 bool Uart::setDataSize(const int index, const int size) {
-    auto state = uart.find(index)->second;
-    state.option.c_cflag &= ~CSIZE;
+    auto iterator = uart.find(index);
+    iterator->second.option.c_cflag &= ~CSIZE;
     switch (size) {
         case 5:
-            state.option.c_cflag |= CS5;
+            iterator->second.option.c_cflag |= CS5;
             break;
         case 6:
-            state.option.c_cflag |= CS6;
+            iterator->second.option.c_cflag |= CS6;
             break;
         case 7:
-            state.option.c_cflag |= CS7;
+            iterator->second.option.c_cflag |= CS7;
             break;
         case 8:
-            state.option.c_cflag |= CS8;
+            iterator->second.option.c_cflag |= CS8;
             break;
         default:
             ALOGE("Invalid data size");
             return false;
     }
-    tcsetattr(state.fd, TCSANOW, &state.option);
+    tcsetattr(iterator->second.fd, TCSANOW, &(iterator->second.option));
     return true;
 }
 
 bool Uart::setHardwareFlowControl(const int index, const int mode) {
-    auto state = uart.find(index)->second;
+    auto iterator = uart.find(index);
     switch (mode) {
         case 0: // HW_FLOW_CONTROL_NONE
-            state.option.c_cflag &= ~CRTSCTS;
+            iterator->second.option.c_cflag &= ~CRTSCTS;
             break;
         case 1: // HW_FLOW_CONTROL_AUTO_RTSCTS
-            state.option.c_cflag |= CRTSCTS;
+            iterator->second.option.c_cflag |= CRTSCTS;
             break;
     }
-    tcsetattr(state.fd, TCSANOW, &state.option);
+    tcsetattr(iterator->second.fd, TCSANOW, &(iterator->second.option));
     return true;
 }
 
 bool Uart::setParity(const int index, const int mode) {
-    auto state = uart.find(index)->second;
+    auto iterator = uart.find(index);
     switch (mode) {
         case 0: // PARITY_ NONE
-            state.option.c_cflag &= ~PARENB;
+            iterator->second.option.c_cflag &= ~PARENB;
             break;
         case 1: // PARITY_ EVEN
-            state.option.c_cflag |= PARENB;
-            state.option.c_cflag &= ~(PARODD|CMSPAR);
+            iterator->second.option.c_cflag |= PARENB;
+            iterator->second.option.c_cflag &= ~(PARODD|CMSPAR);
             break;
         case 2: // PARITY_ODD
-            state.option.c_cflag |= (PARENB | PARODD);
-            state.option.c_cflag &= ~CMSPAR;
+            iterator->second.option.c_cflag |= (PARENB | PARODD);
+            iterator->second.option.c_cflag &= ~CMSPAR;
             break;
         case 3: // PARITY_MARK
-            state.option.c_cflag |= (PARENB | PARODD | CMSPAR);
+            iterator->second.option.c_cflag |= (PARENB | PARODD | CMSPAR);
             break;
         case 4: // PARITY_SPACE
-            state.option.c_cflag |= (PARENB | CMSPAR);
-            state.option.c_cflag &= ~PARODD;
+            iterator->second.option.c_cflag |= (PARENB | CMSPAR);
+            iterator->second.option.c_cflag &= ~PARODD;
             break;
         default:
             ALOGE("parti is invalid");
             return false;
     }
-    tcsetattr(state.fd, TCSANOW, &state.option);
+    tcsetattr(iterator->second.fd, TCSANOW, &(iterator->second.option));
     return true;
 }
 
 bool Uart::setStopBits(const int index, const int bits) {
-    auto state = uart.find(index)->second;
+    auto iterator = uart.find(index);
     switch (bits) {
         case 1: // 1 stop bits
-            state.option.c_cflag &= ~CSTOPB;
+            iterator->second.option.c_cflag &= ~CSTOPB;
             break;
         case 2: // 2 stop bits
-            state.option.c_cflag |= CSTOPB;
+            iterator->second.option.c_cflag |= CSTOPB;
             break;
         default:
             ALOGE("Invalid stop bits");
             return false;
     }
-    tcsetattr(state.fd, TCSANOW, &state.option);
+    tcsetattr(iterator->second.fd, TCSANOW, &(iterator->second.option));
     return true;
 }
 
