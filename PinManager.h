@@ -27,6 +27,7 @@
 #include <string>
 
 #include "Uart.h"
+#include "Spi.h"
 
 #define BOARD_PROPERTY "ro.product.device"
 
@@ -34,6 +35,7 @@ using hardware::hardkernel::odroidthings::pin_t;
 using hardware::hardkernel::odroidthings::i2c_t;
 using hardware::hardkernel::odroidthings::pwm_t;
 using hardware::hardkernel::odroidthings::uart_t;
+using hardware::hardkernel::odroidthings::spi_t;
 using hardware::hardkernel::odroidthings::function_t;
 
 struct pwmState{
@@ -55,11 +57,12 @@ class PinManager {
         i2c_t *i2cList;
         pwm_t *pwmList;
         uart_t *uartList;
+        spi_t *spiList;
         int triggerType[PIN_MAX] = {INT_EDGE_SETUP,};
         std::map<int, pwmState *> pwm;
         std::map<int, int> i2c;
 
-        void initPwm();
+        int initPwm();
 
         // helper function
         void initPwmState(int idx, uint8_t chip, uint8_t node);
@@ -77,7 +80,7 @@ class PinManager {
         };
     public:
         PinManager();
-        void init();
+        int init();
         std::vector<pin_t> getPinList();
 
         // common
@@ -108,6 +111,9 @@ class PinManager {
 
         // uart
         std::unique_ptr<Uart> getUart();
+
+        // spi
+        std::unique_ptr<Spi> getSpi();
 };
 
 #endif /* PIN_MANAGER_H */

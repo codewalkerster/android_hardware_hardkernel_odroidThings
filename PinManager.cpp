@@ -110,37 +110,54 @@ static const uart_t c4_uart_support_list[UART_MAX] = {
     {"UART-1", "/dev/ttyS1"}, // #8, #10
 };
 
+static const spi_t n2_spi_support_list[SPI_MAX] = {
+	{"SPI0.0", "/dev/spidev0.0"},
+};
+
+static const spi_t c4_spi_support_list[SPI_MAX] = {
+	{"SPI0.0", "/dev/spidev0.0"},
+};
+
 PinManager::PinManager(){
     char boardName[PROPERTY_VALUE_MAX];
 
     property_get(BOARD_PROPERTY, boardName, NULL);
     board = boardName;
 
+    pinList = NULL;
+
     ALOGD("Board is %s", board.c_str());
 }
 
-void PinManager::init() {
+int PinManager::init() {
     if (board == "odroidn2") {
         pinList = (pin_t*)n2_pin_support_list;
         i2cList = (i2c_t*)n2_i2c_support_list;
         pwmList = (pwm_t*)n2_pwm_support_list;
         uartList = (uart_t*)n2_uart_support_list;
+        spiList = (spi_t*)n2_spi_support_list;
     } else if (board == "odroidc4") {
         pinList = (pin_t*)c4_pin_support_list;
         i2cList = (i2c_t*)c4_i2c_support_list;
         pwmList = (pwm_t*)c4_pwm_support_list;
         uartList = (uart_t*)c4_uart_support_list;
+        spiList = (spi_t*)c4_spi_support_list;
     } else {
         ALOGD("Board is not initialized");
-        return;
+        return -1;
     }
 
     if (wiringPiSetup()) {
         ALOGD("Board is not initialized");
-        return;
+        return -1;
     }
 
-    initPwm();
+    if (initPwm() <0) {
+        ALOGD("Board is not initialized");
+        return  -1;
+    }
+
+    return 0;
 }
 
 std::vector<pin_t> PinManager::getPinList() {
@@ -275,11 +292,16 @@ void PinManager::unregisterCallback(int idx) {
 
 //TODO: reduce pwm array size to fit the pwm number.
 
-void PinManager::initPwm() {
+int PinManager::initPwm() {
+    if (!pwmList)
+        return -1;
+
     for (int i=0; i<PWM_MAX; i++) {
         auto pin = pwmList[i];
         initPwmState(pin.index, pin.chip, pin.line);
     }
+
+    return 0;
 }
 
 void PinManager::initPwmState(int idx, uint8_t chip, uint8_t node) {
@@ -422,6 +444,17 @@ Result PinManager::writeRegBufferI2c(int idx, uint32_t reg, std::vector<uint8_t>
 }
 
 std::unique_ptr<Uart> PinManager::getUart() {
-    auto uart = std::make_unique<Uart>(uartList);
-    return uart;
+    if (!uartList) {
+        auto uart = std::make_unique<Uart>(uartList);
+        return uart;
+    }
+    return NULL;
+}
+
+std::unique_ptr<Spi> PinManager::getSpi() {
+    if (!spiList) {
+        auto spi = std::make_unique<Spi>(spiList);
+        return spi;
+    }
+    return NULL;
 }
