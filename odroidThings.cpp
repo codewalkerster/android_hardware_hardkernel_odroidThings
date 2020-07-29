@@ -38,7 +38,11 @@ static std::unique_ptr<Spi> gSpi;
 
 static void things_init() {
     gPinManager = std::make_unique<PinManager>();
-    gPinManager->init();
+    if (gPinManager->init() < 0) {
+        ALOGE("Odroid thing is not supported");
+        return;
+    }
+
     gUart = gPinManager->getUart();
     gSpi = gPinManager->getSpi();
 }
@@ -52,12 +56,15 @@ static const std::vector<std::string> things_getPinNameList() {
 }
 
 static const std::vector<std::string> things_getListOf(int mode) {
+    std::vector<std::string> emptyList;
     switch (mode) {
         case PIN_UART:
-            return gUart->getList();
+            if(gUart)
+                return gUart->getList();
             break;
         case PIN_SPI:
-            return gSpi->getList();
+            if(gSpi)
+                return gSpi->getList();
             break;
     }
     return gPinManager->getListOf(mode);

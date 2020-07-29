@@ -124,10 +124,12 @@ PinManager::PinManager(){
     property_get(BOARD_PROPERTY, boardName, NULL);
     board = boardName;
 
+    pinList = NULL;
+
     ALOGD("Board is %s", board.c_str());
 }
 
-void PinManager::init() {
+int PinManager::init() {
     if (board == "odroidn2") {
         pinList = (pin_t*)n2_pin_support_list;
         i2cList = (i2c_t*)n2_i2c_support_list;
@@ -142,15 +144,20 @@ void PinManager::init() {
         spiList = (spi_t*)c4_spi_support_list;
     } else {
         ALOGD("Board is not initialized");
-        return;
+        return -1;
     }
 
     if (wiringPiSetup()) {
         ALOGD("Board is not initialized");
-        return;
+        return -1;
     }
 
-    initPwm();
+    if (initPwm() <0) {
+        ALOGD("Board is not initialized");
+        return  -1;
+    }
+
+    return 0;
 }
 
 std::vector<pin_t> PinManager::getPinList() {
@@ -285,11 +292,16 @@ void PinManager::unregisterCallback(int idx) {
 
 //TODO: reduce pwm array size to fit the pwm number.
 
-void PinManager::initPwm() {
+int PinManager::initPwm() {
+    if (!pwmList)
+        return -1;
+
     for (int i=0; i<PWM_MAX; i++) {
         auto pin = pwmList[i];
         initPwmState(pin.index, pin.chip, pin.line);
     }
+
+    return 0;
 }
 
 void PinManager::initPwmState(int idx, uint8_t chip, uint8_t node) {
@@ -432,11 +444,17 @@ Result PinManager::writeRegBufferI2c(int idx, uint32_t reg, std::vector<uint8_t>
 }
 
 std::unique_ptr<Uart> PinManager::getUart() {
-    auto uart = std::make_unique<Uart>(uartList);
-    return uart;
+    if (!uartList) {
+        auto uart = std::make_unique<Uart>(uartList);
+        return uart;
+    }
+    return NULL;
 }
 
 std::unique_ptr<Spi> PinManager::getSpi() {
-    auto spi = std::make_unique<Spi>(spiList);
-    return spi;
+    if (!spiList) {
+        auto spi = std::make_unique<Spi>(spiList);
+        return spi;
+    }
+    return NULL;
 }

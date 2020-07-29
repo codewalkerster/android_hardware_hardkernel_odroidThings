@@ -62,7 +62,7 @@ class PinManager {
         std::map<int, pwmState *> pwm;
         std::map<int, int> i2c;
 
-        void initPwm();
+        int initPwm();
 
         // helper function
         void initPwmState(int idx, uint8_t chip, uint8_t node);
@@ -80,7 +80,7 @@ class PinManager {
         };
     public:
         PinManager();
-        void init();
+        int init();
         std::vector<pin_t> getPinList();
 
         // common
