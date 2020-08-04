@@ -283,7 +283,7 @@ static bool things_spi_write(int idx, std::vector<uint8_t> txBuffer, int length)
 
     uint8_t *txArray = &txBuffer[0];
 
-    int ret = gSpi->transfer(idx, txArray, NULL, length);
+    int ret = gSpi->write(idx, txArray, length);
 
     if (ret < 0) {
         ALOGE("write is failed(%d)", ret);
@@ -296,7 +296,7 @@ static bool things_spi_write(int idx, std::vector<uint8_t> txBuffer, int length)
 static const std::vector<uint8_t> things_spi_read(int idx, int length) {
     std::vector<uint8_t> rxBuffer(length);
 
-    int ret = gSpi->transfer(idx, NULL, &rxBuffer[0], length);
+    int ret = gSpi->read(idx, &rxBuffer[0], length);
 
     if (ret < 0) {
         ALOGE("read spi is failed(%d)", ret);

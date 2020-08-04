@@ -191,34 +191,125 @@ inline int Spi::applyMode(const int index) {
     return ret;
 }
 
+#define SPI_LENGTH_MAX 512
+
+int Spi::read(const int index, const uint8_t *rx, const int length) {
+    const auto state = spi.find(index)->second;
+
+    int left_length = length;
+    int start_index = 0;
+
+    spi_ioc_transfer trans;
+    memset(&trans, 0, sizeof(trans));
+
+    do {
+        trans.rx_buf = (unsigned long)&rx[start_index];
+        trans.len = (left_length > SPI_LENGTH_MAX)?
+            SPI_LENGTH_MAX: left_length;
+        trans.delay_usecs = state.delay;
+        trans.speed_hz = state.frequency;
+        trans.bits_per_word = state.bits;
+        trans.cs_change = state.csChange;
+
+        left_length -= SPI_LENGTH_MAX;
+        start_index += SPI_LENGTH_MAX;
+
+        int ret = ioctl(state.fd, SPI_IOC_MESSAGE(1), &trans);
+
+        if (ret < 0) {
+            std::string errMessage(strerror(errno));
+            ALOGE("Failed to do read on SPI BUS %d, ret: (%d) Error message: %s",
+                    state.fd, ret, errMessage.c_str());
+
+            if (errno == 22) {
+                ALOGE("length - %d, delay - %d, speed- %d, bits- %d, cs_change - %x",
+                        length, state.delay, state.frequency, state.bits, state.csChange);
+            }
+
+            return ret;
+        }
+    } while (left_length > 0);
+
+    return errno;
+}
+
+int Spi::write(const int index, const uint8_t *tx, const int length) {
+    const auto state = spi.find(index)->second;
+
+    int left_length = length;
+    int start_index = 0;
+
+    spi_ioc_transfer trans;
+    memset(&trans, 0, sizeof(trans));
+
+    do {
+        trans.tx_buf = (unsigned long)&tx[start_index];
+        trans.len = (left_length > SPI_LENGTH_MAX)?
+            SPI_LENGTH_MAX: left_length;
+        trans.delay_usecs = state.delay;
+        trans.speed_hz = state.frequency;
+        trans.bits_per_word = state.bits;
+        trans.cs_change = state.csChange;
+
+        left_length -= SPI_LENGTH_MAX;
+        start_index += SPI_LENGTH_MAX;
+
+        int ret = ioctl(state.fd, SPI_IOC_MESSAGE(1), &trans);
+
+        if (ret < 0) {
+            std::string errMessage(strerror(errno));
+            ALOGE("Failed to do write on SPI BUS %d, ret: (%d) Error message: %s",
+                    state.fd, ret, errMessage.c_str());
+
+            if (errno == 22) {
+                ALOGE("length - %d, delay - %d, speed- %d, bits- %d, cs_change - %x",
+                        length, state.delay, state.frequency, state.bits, state.csChange);
+            }
+
+            return ret;
+        }
+    } while (left_length > 0);
+
+    return errno;
+}
+
 int Spi::transfer(const int index, const uint8_t *tx, const uint8_t *rx, const int length) {
     const auto state = spi.find(index)->second;
 
+    int left_length = length;
+    int start_index = 0;
+
     spi_ioc_transfer trans;
-
     memset(&trans, 0, sizeof(trans));
-    trans.tx_buf = (unsigned long)tx;
-    trans.rx_buf = (unsigned long)rx;
-    trans.len = length;
-    trans.delay_usecs = state.delay;
-    trans.speed_hz = state.frequency;
-    trans.bits_per_word = state.bits;
-    trans.cs_change = state.csChange;
 
-    int ret = ioctl(state.fd, SPI_IOC_MESSAGE(1), &trans);
+    do {
+        trans.tx_buf = (unsigned long)&tx[start_index];
+        trans.rx_buf = (unsigned long)&rx[start_index];
+        trans.len = (left_length > SPI_LENGTH_MAX)?
+            SPI_LENGTH_MAX: left_length;
+        trans.delay_usecs = state.delay;
+        trans.speed_hz = state.frequency;
+        trans.bits_per_word = state.bits;
+        trans.cs_change = state.csChange;
 
-    if (ret < 0) {
-        std::string errMessage(strerror(errno));
-        ALOGE("Failed to do transfer read/write on SPI BUS %d, ret: (%d) Error message: %s",
-                state.fd, ret, errMessage.c_str());
+        left_length -= SPI_LENGTH_MAX;
+        start_index += SPI_LENGTH_MAX;
 
-        if (errno == 22) {
-            ALOGE("length - %d, delay - %d, speed- %d, bits- %d, cs_change - %x",
-                    length, state.delay, state.frequency, state.bits, state.csChange);
+        int ret = ioctl(state.fd, SPI_IOC_MESSAGE(1), &trans);
+
+        if (ret < 0) {
+            std::string errMessage(strerror(errno));
+            ALOGE("Failed to do transfer on SPI BUS %d, ret: (%d) Error message: %s",
+                    state.fd, ret, errMessage.c_str());
+
+            if (errno == 22) {
+                ALOGE("length - %d, delay - %d, speed- %d, bits- %d, cs_change - %x",
+                        length, state.delay, state.frequency, state.bits, state.csChange);
+            }
+
+            return ret;
         }
-
-        return ret;
-    }
+    } while (left_length > 0);
 
     return errno;
 }

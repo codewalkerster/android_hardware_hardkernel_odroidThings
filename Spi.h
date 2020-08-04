@@ -58,6 +58,8 @@ class Spi {
         int setDelay(const int index, const uint16_t delay);
         int setFrequency(const int index, const uint32_t frequency);
 
+        int read(const int index, const uint8_t *rx, const int length);
+        int write(const int index, const uint8_t *tx, const int length);
         int transfer(const int index, const uint8_t *tx, const uint8_t *rx, const int length);
 };
 #endif /* SPI_H_ */
