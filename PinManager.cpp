@@ -444,7 +444,7 @@ Result PinManager::writeRegBufferI2c(int idx, uint32_t reg, std::vector<uint8_t>
 }
 
 std::unique_ptr<Uart> PinManager::getUart() {
-    if (!uartList) {
+    if (uartList) {
         auto uart = std::make_unique<Uart>(uartList);
         return uart;
     }
@@ -452,7 +452,7 @@ std::unique_ptr<Uart> PinManager::getUart() {
 }
 
 std::unique_ptr<Spi> PinManager::getSpi() {
-    if (!spiList) {
+    if (spiList) {
         auto spi = std::make_unique<Spi>(spiList);
         return spi;
     }
