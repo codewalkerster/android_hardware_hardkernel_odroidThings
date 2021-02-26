@@ -45,11 +45,21 @@ void Uart::open(const int index) {
     uartState state;
     state.fd = fd;
     tcgetattr(fd, &(state.option));
+
+    state.option.c_lflag &= ~ECHO;
+    state.option.c_iflag &= ~ICRNL;
+    tcsetattr(fd, TCSAFLUSH, &(state.option));
+
     uart.insert(std::make_pair(index, state));
 }
 
 void Uart::close(const int index) {
-    const auto state= uart.find(index)->second;
+    auto state= uart.find(index)->second;
+
+    state.option.c_lflag &= ECHO;
+    state.option.c_iflag &= ICRNL;
+    tcsetattr(state.fd, TCSAFLUSH, &(state.option));
+
     ::close(state.fd);
     uart.erase(index);
 }
