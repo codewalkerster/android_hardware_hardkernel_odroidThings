@@ -40,13 +40,13 @@ struct uartState {
 
 class Uart {
     private:
-        uart_t *uartList;
+        std::vector<uart_t> uartList;
         std::map<int, uartState> uart;
         Uart();
         uint32_t getBaudrate(const int baudrate);
 
     public:
-        Uart(uart_t * list);
+        Uart(std::vector<uart_t> list);
         std::vector<std::string> getList();
         void open(const int index);
         void close(const int index);

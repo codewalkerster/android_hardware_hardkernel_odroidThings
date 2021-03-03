@@ -25,6 +25,8 @@
 #include <vector>
 #include <map>
 
+#include <unistd.h>
+
 #include <cutils/log.h>
 
 #include "PinManager.h"
@@ -33,23 +35,23 @@
 static const pin_t n2_pin_support_list[PIN_MAX] = {
     {"", -1, 0},
     {"3.3V", -1, PIN_PWR}, {"5V", -1, PIN_PWR},
-    {"3", 8, PIN_I2C}, {"5V", -1, PIN_PWR},
-    {"5", 9, PIN_I2C}, {"GND", -1, PIN_GND},
-    {"7", 7, PIN_GPIO}, {"8", 15, PIN_UART},
-    {"GND", -1, PIN_GND}, {"10", 16, PIN_UART},
+    {"3", 8, PIN_GPIO|PIN_I2C}, {"5V", -1, PIN_PWR},
+    {"5", 9, PIN_GPIO|PIN_I2C}, {"GND", -1, PIN_GND},
+    {"7", 7, PIN_GPIO}, {"8", 15, PIN_GPIO|PIN_UART},
+    {"GND", -1, PIN_GND}, {"10", 16, PIN_GPIO|PIN_UART},
     {"11", 0, PIN_GPIO}, {"12", 1, PIN_GPIO|PIN_PWM},
     {"13", 2, PIN_GPIO}, {"GND", -1, PIN_GND},
-    {"15", 3, PIN_GPIO|PIN_PWM}, {"16", 4, PIN_GPIO},
+    {"15", 3, PIN_GPIO|PIN_PWM|PIN_UART}, {"16", 4, PIN_GPIO},
     {"3.3V", -1, PIN_PWR}, {"18", 5, PIN_GPIO},
-    {"19", 12, PIN_GPIO}, {"GND", -1, PIN_GND},
-    {"21", 13, PIN_GPIO}, {"22", 6, PIN_GPIO},
-    {"23", 14, PIN_GPIO}, {"24", 10, PIN_GPIO},
+    {"19", 12, PIN_GPIO|PIN_SPI}, {"GND", -1, PIN_GND},
+    {"21", 13, PIN_GPIO|PIN_SPI}, {"22", 6, PIN_GPIO},
+    {"23", 14, PIN_GPIO|PIN_SPI}, {"24", 10, PIN_GPIO|PIN_SPI},
     {"25", -1, PIN_GND}, {"26", 11, PIN_GPIO},
-    {"27", 30, PIN_I2C}, {"28", 31, PIN_I2C},
+    {"27", 30, PIN_GPIO|PIN_I2C}, {"28", 31, PIN_GPIO|PIN_I2C},
     {"29", 21, PIN_GPIO}, {"GND", -1, PIN_GND},
     {"31", 22, PIN_GPIO}, {"32", 26, PIN_GPIO},
     {"33", 23, PIN_GPIO|PIN_PWM}, {"GND", -1, PIN_GND},
-    {"35", 24, PIN_GPIO|PIN_PWM}, {"36", 27, PIN_GPIO},
+    {"35", 24, PIN_GPIO|PIN_PWM|PIN_UART}, {"36", 27, PIN_GPIO},
     {"AIN0", 25, PIN_AIN}, {"1.8V", 28, PIN_PWR},
     {"GND", -1, PIN_GND}, {"AIN1", 29, PIN_AIN},
 };
@@ -57,35 +59,35 @@ static const pin_t n2_pin_support_list[PIN_MAX] = {
 static const pin_t c4_pin_support_list[PIN_MAX] = {
     {"", -1, 0},
     {"3.3V", -1, PIN_PWR}, {"5V", -1, PIN_PWR},
-    {"3", 8, PIN_I2C}, {"5V", -1, PIN_PWR},
-    {"5", 9, PIN_I2C}, {"GND", -1, PIN_GND},
-    {"7", 7, PIN_GPIO}, {"8", 15, PIN_UART},
-    {"GND", -1, PIN_GND}, {"10", 16, PIN_UART},
+    {"3", 8, PIN_GPIO|PIN_I2C}, {"5V", -1, PIN_PWR},
+    {"5", 9, PIN_GPIO|PIN_I2C}, {"GND", -1, PIN_GND},
+    {"7", 7, PIN_GPIO}, {"8", 15, PIN_GPIO|PIN_UART},
+    {"GND", -1, PIN_GND}, {"10", 16, PIN_GPIO|PIN_UART},
     {"11", 0, PIN_GPIO}, {"12", 1, PIN_GPIO|PIN_PWM},
     {"13", 2, PIN_GPIO}, {"GND", -1, PIN_GND},
-    {"15", 3, PIN_GPIO|PIN_PWM}, {"16", 4, PIN_GPIO},
+    {"15", 3, PIN_GPIO|PIN_PWM|PIN_UART}, {"16", 4, PIN_GPIO},
     {"3.3V", -1, PIN_PWR}, {"18", 5, PIN_GPIO},
-    {"19", 12, PIN_GPIO}, {"GND", -1, PIN_GND},
-    {"21", 13, PIN_GPIO}, {"22", 6, PIN_GPIO},
-    {"23", 14, PIN_GPIO}, {"24", 10, PIN_GPIO},
+    {"19", 12, PIN_GPIO|PIN_SPI}, {"GND", -1, PIN_GND},
+    {"21", 13, PIN_GPIO|PIN_SPI}, {"22", 6, PIN_GPIO},
+    {"23", 14, PIN_GPIO|PIN_SPI}, {"24", 10, PIN_GPIO|PIN_SPI},
     {"25", -1, PIN_GND}, {"26", 11, PIN_GPIO},
-    {"27", 30, PIN_I2C}, {"28", 31, PIN_I2C},
+    {"27", 30, PIN_GPIO|PIN_I2C}, {"28", 31, PIN_GPIO|PIN_I2C},
     {"29", 21, PIN_GPIO}, {"GND", -1, PIN_GND},
     {"31", 22, PIN_GPIO}, {"32", 26, PIN_GPIO},
-    {"33", 23, PIN_GPIO|PIN_PWM}, {"GND", -1, PIN_GND},
+    {"33", 23, PIN_GPIO|PIN_PWM|PIN_UART}, {"GND", -1, PIN_GND},
     {"35", 24, PIN_GPIO|PIN_PWM}, {"36", 27, PIN_GPIO},
     {"AIN3", 25, PIN_AIN}, {"1.8V", 28, PIN_PWR},
     {"GND", -1, PIN_GND}, {"AIN4", 29, PIN_AIN},
 };
 
 static const i2c_t n2_i2c_support_list[I2C_MAX] = {
-    {"I2C-1", "/dev/i2c-0"},
-    {"I2C-2", "/dev/i2c-1"},
+    {"I2C-1", "/dev/i2c-0", "3", "5"},
+    {"I2C-2", "/dev/i2c-1", "27", "28"},
 };
 
 static const i2c_t c4_i2c_support_list[I2C_MAX] = {
-    {"I2C-1", "/dev/i2c-0"},
-    {"I2C-2", "/dev/i2c-1"},
+    {"I2C-1", "/dev/i2c-0", "3", "5"},
+    {"I2C-2", "/dev/i2c-1", "27", "28"},
 };
 
 static const pwm_t n2_pwm_support_list[PWM_MAX] = {
@@ -103,11 +105,13 @@ static const pwm_t c4_pwm_support_list[PWM_MAX] = {
 };
 
 static const uart_t n2_uart_support_list[UART_MAX] = {
-    {"UART-1", "/dev/ttyS1"}, // #8, #10
+    {"UART-1", "/dev/ttyS1", "10", "8"},
+    {"UART-2", "/dev/ttyS2", "15", "35"},
 };
 
 static const uart_t c4_uart_support_list[UART_MAX] = {
-    {"UART-1", "/dev/ttyS1"}, // #8, #10
+    {"UART-1", "/dev/ttyS1", "10", "8"},
+    {"UART-2", "/dev/ttyS2", "15", "33"},
 };
 
 static const spi_t n2_spi_support_list[SPI_MAX] = {
@@ -217,8 +221,10 @@ std::vector<std::string> PinManager::getListOf(int mode) {
             }
             break;
         case PIN_I2C:
-            for (int i=0; i<I2C_MAX; i++)
-                list.push_back(i2cList[i].name);
+            for (int i=0; i<I2C_MAX; i++) {
+                if (access(i2cList[i].path.c_str(), F_OK) == 0)
+                    list.push_back(i2cList[i].name);
+            }
             break;
     }
     return list;
@@ -445,16 +451,27 @@ Result PinManager::writeRegBufferI2c(int idx, uint32_t reg, std::vector<uint8_t>
 
 std::unique_ptr<Uart> PinManager::getUart() {
     if (uartList) {
-        auto uart = std::make_unique<Uart>(uartList);
-        return uart;
+        std::vector<uart_t> list;
+        for (int i=0; i < UART_MAX; i++) {
+            if (access(uartList[i].path.c_str(), F_OK) == 0)
+                list.push_back(uartList[i]);
+        }
+        if (list.size()) {
+            auto uart = std::make_unique<Uart>(list);
+            return uart;
+        }
+        else
+            return NULL;
     }
     return NULL;
 }
 
 std::unique_ptr<Spi> PinManager::getSpi() {
     if (spiList) {
-        auto spi = std::make_unique<Spi>(spiList);
-        return spi;
+        if (access(spiList->path.c_str(), F_OK) == 0) {
+            auto spi = std::make_unique<Spi>(spiList);
+            return spi;
+        }
     }
     return NULL;
 }

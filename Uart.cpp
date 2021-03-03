@@ -23,13 +23,13 @@
 Uart::Uart() {
 }
 
-Uart::Uart(uart_t *list) {
+Uart::Uart(std::vector<uart_t> list) {
     uartList = list;
 }
 
 std::vector<std::string> Uart::getList() {
     std::vector<std::string> list;
-    for (int i=0; i<UART_MAX; i++)
+    for (size_t i=0; i < uartList.size(); i++)
         list.push_back(uartList[i].name);
     return list;
 }
