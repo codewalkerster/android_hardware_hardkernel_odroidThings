@@ -70,10 +70,10 @@ static const pin_t c4_pin_support_list[PIN_MAX] = {
     {"19", 12, PIN_GPIO|PIN_SPI}, {"GND", -1, PIN_GND},
     {"21", 13, PIN_GPIO|PIN_SPI}, {"22", 6, PIN_GPIO},
     {"23", 14, PIN_GPIO|PIN_SPI}, {"24", 10, PIN_GPIO|PIN_SPI},
-    {"25", -1, PIN_GND}, {"26", 11, PIN_GPIO},
+    {"25", -1, PIN_GND}, {"26", 11, PIN_GPIO|PIN_UART},
     {"27", 30, PIN_GPIO|PIN_I2C}, {"28", 31, PIN_GPIO|PIN_I2C},
     {"29", 21, PIN_GPIO}, {"GND", -1, PIN_GND},
-    {"31", 22, PIN_GPIO}, {"32", 26, PIN_GPIO},
+    {"31", 22, PIN_GPIO}, {"32", 26, PIN_GPIO|PIN_UART},
     {"33", 23, PIN_GPIO|PIN_PWM|PIN_UART}, {"GND", -1, PIN_GND},
     {"35", 24, PIN_GPIO|PIN_PWM}, {"36", 27, PIN_GPIO},
     {"AIN3", 25, PIN_AIN}, {"1.8V", 28, PIN_PWR},
@@ -104,14 +104,16 @@ static const pwm_t c4_pwm_support_list[PWM_MAX] = {
     {24, 0, 1}, // Pin #35
 };
 
-static const uart_t n2_uart_support_list[UART_MAX] = {
+static const uart_t n2_uart_support_list[] = {
     {"UART-1", "/dev/ttyS1", "10", "8"},
     {"UART-2", "/dev/ttyS2", "15", "35"},
 };
 
-static const uart_t c4_uart_support_list[UART_MAX] = {
+static const uart_t c4_uart_support_list[] = {
     {"UART-1", "/dev/ttyS1", "10", "8"},
     {"UART-2", "/dev/ttyS2", "15", "33"},
+    {"UART-3", "/dev/ttyS3", "26", "32"},
+    {"UART-4", "/dev/ttyS4", "2", "6"},
 };
 
 static const spi_t n2_spi_support_list[SPI_MAX] = {
@@ -448,6 +450,8 @@ Result PinManager::writeRegBufferI2c(int idx, uint32_t reg, std::vector<uint8_t>
 
     return Result::OK;
 }
+
+#define UART_MAX (int)(sizeof uartList / sizeof uartList[0])
 
 std::unique_ptr<Uart> PinManager::getUart() {
     if (uartList) {
