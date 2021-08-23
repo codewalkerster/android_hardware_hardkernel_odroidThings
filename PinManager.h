@@ -57,6 +57,7 @@ class PinManager {
         i2c_t *i2cList;
         pwm_t *pwmList;
         uart_t *uartList;
+        uint8_t uartNum;
         spi_t *spiList;
         int triggerType[PIN_MAX] = {INT_EDGE_SETUP,};
         std::map<int, pwmState *> pwm;

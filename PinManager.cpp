@@ -141,12 +141,14 @@ int PinManager::init() {
         i2cList = (i2c_t*)n2_i2c_support_list;
         pwmList = (pwm_t*)n2_pwm_support_list;
         uartList = (uart_t*)n2_uart_support_list;
+        uartNum = 2;
         spiList = (spi_t*)n2_spi_support_list;
     } else if (board == "odroidc4") {
         pinList = (pin_t*)c4_pin_support_list;
         i2cList = (i2c_t*)c4_i2c_support_list;
         pwmList = (pwm_t*)c4_pwm_support_list;
         uartList = (uart_t*)c4_uart_support_list;
+        uartNum = 4;
         spiList = (spi_t*)c4_spi_support_list;
     } else {
         ALOGD("Board is not initialized");
@@ -451,12 +453,11 @@ Result PinManager::writeRegBufferI2c(int idx, uint32_t reg, std::vector<uint8_t>
     return Result::OK;
 }
 
-#define UART_MAX (int)(sizeof uartList / sizeof uartList[0])
-
 std::unique_ptr<Uart> PinManager::getUart() {
+
     if (uartList) {
         std::vector<uart_t> list;
-        for (int i=0; i < UART_MAX; i++) {
+        for (int i=0; i < uartNum; i++) {
             if (access(uartList[i].path.c_str(), F_OK) == 0)
                 list.push_back(uartList[i]);
         }
