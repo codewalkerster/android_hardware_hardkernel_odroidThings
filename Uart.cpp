@@ -17,8 +17,8 @@
  */
 
 #include "Uart.h"
-#include <cutils/log.h>
 #include <cerrno>
+#include <cutils/log.h>
 
 Uart::Uart() {
 }

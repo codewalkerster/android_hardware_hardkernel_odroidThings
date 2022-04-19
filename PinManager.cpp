@@ -16,151 +16,49 @@
  *    If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <wiringPi/wiringPi.h>
+#include "OdroidC4.h"
+#include "OdroidM1.h"
+#include "OdroidN2.h"
+#include "PinManager.h"
+#include <cutils/log.h>
 #include <cutils/properties.h>
 #include <hardware/odroidThings.h>
 #include <hardware/odroidthings-base.h>
-
-#include <sstream>
-#include <vector>
 #include <map>
-
+#include <sstream>
 #include <unistd.h>
-
-#include <cutils/log.h>
-
-#include "PinManager.h"
-
-// pin array number is based on physical pin number
-static const pin_t n2_pin_support_list[PIN_MAX] = {
-    {"", -1, 0},
-    {"3.3V", -1, PIN_PWR}, {"5V", -1, PIN_PWR},
-    {"3", 8, PIN_GPIO|PIN_I2C}, {"5V", -1, PIN_PWR},
-    {"5", 9, PIN_GPIO|PIN_I2C}, {"GND", -1, PIN_GND},
-    {"7", 7, PIN_GPIO}, {"8", 15, PIN_GPIO|PIN_UART},
-    {"GND", -1, PIN_GND}, {"10", 16, PIN_GPIO|PIN_UART},
-    {"11", 0, PIN_GPIO}, {"12", 1, PIN_GPIO|PIN_PWM},
-    {"13", 2, PIN_GPIO}, {"GND", -1, PIN_GND},
-    {"15", 3, PIN_GPIO|PIN_PWM|PIN_UART}, {"16", 4, PIN_GPIO},
-    {"3.3V", -1, PIN_PWR}, {"18", 5, PIN_GPIO},
-    {"19", 12, PIN_GPIO|PIN_SPI}, {"GND", -1, PIN_GND},
-    {"21", 13, PIN_GPIO|PIN_SPI}, {"22", 6, PIN_GPIO},
-    {"23", 14, PIN_GPIO|PIN_SPI}, {"24", 10, PIN_GPIO|PIN_SPI},
-    {"25", -1, PIN_GND}, {"26", 11, PIN_GPIO},
-    {"27", 30, PIN_GPIO|PIN_I2C}, {"28", 31, PIN_GPIO|PIN_I2C},
-    {"29", 21, PIN_GPIO}, {"GND", -1, PIN_GND},
-    {"31", 22, PIN_GPIO}, {"32", 26, PIN_GPIO},
-    {"33", 23, PIN_GPIO|PIN_PWM}, {"GND", -1, PIN_GND},
-    {"35", 24, PIN_GPIO|PIN_PWM|PIN_UART}, {"36", 27, PIN_GPIO},
-    {"AIN0", 25, PIN_AIN}, {"1.8V", 28, PIN_PWR},
-    {"GND", -1, PIN_GND}, {"AIN1", 29, PIN_AIN},
-};
-
-static const pin_t c4_pin_support_list[PIN_MAX] = {
-    {"", -1, 0},
-    {"3.3V", -1, PIN_PWR}, {"5V", -1, PIN_PWR},
-    {"3", 8, PIN_GPIO|PIN_I2C}, {"5V", -1, PIN_PWR},
-    {"5", 9, PIN_GPIO|PIN_I2C}, {"GND", -1, PIN_GND},
-    {"7", 7, PIN_GPIO}, {"8", 15, PIN_GPIO|PIN_UART},
-    {"GND", -1, PIN_GND}, {"10", 16, PIN_GPIO|PIN_UART},
-    {"11", 0, PIN_GPIO}, {"12", 1, PIN_GPIO|PIN_PWM},
-    {"13", 2, PIN_GPIO}, {"GND", -1, PIN_GND},
-    {"15", 3, PIN_GPIO|PIN_PWM|PIN_UART}, {"16", 4, PIN_GPIO},
-    {"3.3V", -1, PIN_PWR}, {"18", 5, PIN_GPIO},
-    {"19", 12, PIN_GPIO|PIN_SPI}, {"GND", -1, PIN_GND},
-    {"21", 13, PIN_GPIO|PIN_SPI}, {"22", 6, PIN_GPIO},
-    {"23", 14, PIN_GPIO|PIN_SPI}, {"24", 10, PIN_GPIO|PIN_SPI},
-    {"25", -1, PIN_GND}, {"26", 11, PIN_GPIO|PIN_UART},
-    {"27", 30, PIN_GPIO|PIN_I2C}, {"28", 31, PIN_GPIO|PIN_I2C},
-    {"29", 21, PIN_GPIO}, {"GND", -1, PIN_GND},
-    {"31", 22, PIN_GPIO}, {"32", 26, PIN_GPIO|PIN_UART},
-    {"33", 23, PIN_GPIO|PIN_PWM|PIN_UART}, {"GND", -1, PIN_GND},
-    {"35", 24, PIN_GPIO|PIN_PWM}, {"36", 27, PIN_GPIO},
-    {"AIN3", 25, PIN_AIN}, {"1.8V", 28, PIN_PWR},
-    {"GND", -1, PIN_GND}, {"AIN4", 29, PIN_AIN},
-};
-
-static const i2c_t n2_i2c_support_list[I2C_MAX] = {
-    {"I2C-1", "/dev/i2c-0", "3", "5"},
-    {"I2C-2", "/dev/i2c-1", "27", "28"},
-};
-
-static const i2c_t c4_i2c_support_list[I2C_MAX] = {
-    {"I2C-1", "/dev/i2c-0", "3", "5"},
-    {"I2C-2", "/dev/i2c-1", "27", "28"},
-};
-
-static const pwm_t n2_pwm_support_list[PWM_MAX] = {
-    {1, 8, 0}, // Pin #12
-    {3, 8 ,1}, // Pin #15
-    {23, 4, 0}, // Pin #33
-    {24, 4, 1}, // Pin #35
-};
-
-static const pwm_t c4_pwm_support_list[PWM_MAX] = {
-    {1, 4, 0}, // Pin #12
-    {3, 4 ,1}, // Pin #15
-    {23, 0, 0}, // Pin #33
-    {24, 0, 1}, // Pin #35
-};
-
-static const uart_t n2_uart_support_list[] = {
-    {"UART-1", "/dev/ttyS1", "10", "8"},
-    {"UART-2", "/dev/ttyS2", "15", "35"},
-};
-
-static const uart_t c4_uart_support_list[] = {
-    {"UART-1", "/dev/ttyS1", "10", "8"},
-    {"UART-2", "/dev/ttyS2", "15", "33"},
-    {"UART-3", "/dev/ttyS3", "26", "32"},
-    {"UART-4", "/dev/ttyS4", "2", "6"},
-};
-
-static const spi_t n2_spi_support_list[SPI_MAX] = {
-	{"SPI0.0", "/dev/spidev0.0"},
-};
-
-static const spi_t c4_spi_support_list[SPI_MAX] = {
-	{"SPI0.0", "/dev/spidev0.0"},
-};
+#include <vector>
+#include <wiringPi/wiringPi.h>
 
 PinManager::PinManager(){
     char boardName[PROPERTY_VALUE_MAX];
+    std::string name;
 
     property_get(BOARD_PROPERTY, boardName, NULL);
-    board = boardName;
+    name = boardName;
 
-    pinList = NULL;
+    if (!name.compare(0, strlen("odroidn2"), "odroidn2"))
+        board = new OdroidN2();
+    else if (!name.compare(0, strlen("odroidc4"), "odroidc4"))
+        board = new OdroidC4();
+    else if (!name.compare(0, strlen("odroidm1"), "odroidm1"))
+        board = new OdroidM1();
+    else {
+        board = new Board(name);
+        ALOGD("Board is not initialized");
+        return;
+    }
 
-    ALOGD("Board is %s", board.c_str());
+    ALOGD("Board is %s", name.c_str());
 }
 
 int PinManager::init() {
-    if (board == "odroidn2") {
-        pinList = (pin_t*)n2_pin_support_list;
-        i2cList = (i2c_t*)n2_i2c_support_list;
-        pwmList = (pwm_t*)n2_pwm_support_list;
-        uartList = (uart_t*)n2_uart_support_list;
-        uartNum = 2;
-        spiList = (spi_t*)n2_spi_support_list;
-    } else if (board == "odroidc4") {
-        pinList = (pin_t*)c4_pin_support_list;
-        i2cList = (i2c_t*)c4_i2c_support_list;
-        pwmList = (pwm_t*)c4_pwm_support_list;
-        uartList = (uart_t*)c4_uart_support_list;
-        uartNum = 4;
-        spiList = (spi_t*)c4_spi_support_list;
-    } else {
-        ALOGD("Board is not initialized");
-        return -1;
-    }
-
     if (wiringPiSetup()) {
         ALOGD("Board is not initialized");
         return -1;
     }
 
-    if (initPwm() <0) {
+    if (initPwm() < 0) {
         ALOGD("Board is not initialized");
         return  -1;
     }
@@ -169,77 +67,64 @@ int PinManager::init() {
 }
 
 std::vector<pin_t> PinManager::getPinList() {
-    std::vector<pin_t> list;
-    if (!pinList) {
-        ALOGD("Board is not initialized");
-        return list;
-    }
-
-    for (int i=0; i<PIN_MAX; i++)
-        list.push_back(pinList[i]);
-    return list;
+    return board->getPinList();
 }
 
 std::vector<std::string> PinManager::getPinNameList() {
-    std::vector<std::string> list;
-    if (!pinList) {
-        ALOGD("Board is not initialized");
-        return list;
-    }
-
-    for (int i=0; i<PIN_MAX; i++)
-        list.push_back(pinList[i].name);
-    return list;
+    return board->getPinNameList();
 }
 
 std::vector<std::string> PinManager::getListOf(int mode) {
     std::vector<std::string> list;
-    if (!pinList) {
-        ALOGD("Board is not initialized");
-        return list;
-    }
-
     switch (mode) {
-        case PIN_GPIO:
-            for (int i=0; i<PIN_MAX; i++) {
-                if (pinList[i].availableModes & PIN_GPIO) {
-                    int alt = getAlt(pinList[i].pin);
-                    if (alt < 2)
-                        list.push_back(pinList[i].name);
-                }
-            }
-            break;
-        case PIN_PWM:
-            for (int i=0; i<PIN_MAX; i++) {
-                if (pinList[i].availableModes & PIN_PWM) {
-                    int alt = getAlt(pinList[i].pin);
+        case PIN_GPIO: {
+            auto pinList = board->getPinList();
 
-                    if (alt < 2) {
-                        list.push_back(pinList[i].name);
-                    }
-                    if ((pinList[i].pin < 4) && (alt == 2))
-                        list.push_back(pinList[i].name);
-                    else if ((pinList[i].pin > 22) && (alt == 5))
-                        list.push_back(pinList[i].name);
+            for (auto pin = pinList.begin(); pin != pinList.end(); pin++) {
+                if (pin->availableModes & PIN_GPIO) {
+                    int alt = getAlt(pin->pin);
+                    if (alt < 2)
+                        list.push_back(pin->name);
                 }
             }
             break;
-        case PIN_I2C:
-            for (int i=0; i<I2C_MAX; i++) {
-                if (access(i2cList[i].path.c_str(), F_OK) == 0)
-                    list.push_back(i2cList[i].name);
+        }
+        case PIN_PWM: {
+            auto pinList = board->getPinList();
+
+            for (auto pin = pinList.begin(); pin != pinList.end(); pin++) {
+                if (pin->availableModes & PIN_PWM) {
+                    int alt = getAlt(pin->pin);
+                    if (alt < 2) {
+                        list.push_back(pin->name);
+                    }
+                    if ((pin->pin < 4) && (alt == 2))
+                        list.push_back(pin->name);
+                    else if ((pin->pin > 22) && (alt == 5))
+                        list.push_back(pin->name);
+               }
             }
             break;
+        }
+        case PIN_I2C: {
+            auto i2cList = board->getI2cList();
+
+            for (auto i2c = i2cList.begin(); i2c != i2cList.end(); i2c++) {
+                if (access(i2c->path.c_str(), F_OK) == 0)
+                    list.push_back(i2c->name);
+            }
+            break;
+        }
     }
     return list;
 }
 
 bool PinManager::getValue(int idx) {
-    return (digitalRead(pinList[idx].pin) == HIGH);
+    return (digitalRead(board->getPin(idx)) == HIGH);
 }
 
 void PinManager::setDirection(int idx, direction_t direction) {
-    int pin = pinList[idx].pin;
+    int pin = board->getPin(idx);
     switch (direction) {
         case DIRECTION_IN:
             pinMode(pin, INPUT);
@@ -256,11 +141,11 @@ void PinManager::setDirection(int idx, direction_t direction) {
 }
 
 void PinManager::setValue(int idx, bool value) {
-    digitalWrite(pinList[idx].pin, value?HIGH:LOW);
+    digitalWrite(board->getPin(idx), value?HIGH:LOW);
 }
 
 void PinManager::setActiveType(int idx, int activeType) {
-    int pin = pinList[idx].pin;
+    int pin = board->getPin(idx);
     switch (activeType) {
         case ACTIVE_LOW:
             pullUpDnControl(pin, PUD_UP);
@@ -272,7 +157,7 @@ void PinManager::setActiveType(int idx, int activeType) {
 }
 
 void PinManager::setEdgeTriggerType(int idx, int edgeTriggerType) {
-    int pin = pinList[idx].pin;
+    int pin = board->getPin(idx);
     switch (edgeTriggerType) {
         case EDGE_NONE:
             return;
@@ -290,12 +175,12 @@ void PinManager::setEdgeTriggerType(int idx, int edgeTriggerType) {
 }
 
 void PinManager::registerCallback(int idx, function_t callback) {
-    int pin = pinList[idx].pin;
+    int pin = board->getPin(idx);
     wiringPiISR(pin, triggerType[pin], callback);
 }
 
 void PinManager::unregisterCallback(int idx) {
-    wiringPiISRCancel(pinList[idx].pin);
+    wiringPiISRCancel(board->getPin(idx));
 }
 
 #define PWM_RANGE_MAX 65535
@@ -303,13 +188,9 @@ void PinManager::unregisterCallback(int idx) {
 //TODO: reduce pwm array size to fit the pwm number.
 
 int PinManager::initPwm() {
-    if (!pwmList)
-        return -1;
-
-    for (int i=0; i<PWM_MAX; i++) {
-        auto pin = pwmList[i];
-        initPwmState(pin.index, pin.chip, pin.line);
-    }
+    auto list = board->getPwmList();
+    for (auto pin = list.begin(); pin != list.end(); pin++)
+        initPwmState(pin->index, pin->chip, pin->line);
 
     return 0;
 }
@@ -341,7 +222,7 @@ inline void PinManager::writeSysfsTo(const std::string path, const std::string v
 }
 
 void PinManager::openPwm(int idx) {
-    auto pin = pinList[idx].pin;
+    auto pin = board->getPin(idx);
     const auto state = pwm.find(pin)->second;
     std::ostringstream openPath;
 
@@ -357,7 +238,7 @@ void PinManager::openPwm(int idx) {
 }
 
 void PinManager::closePwm(int idx) {
-    auto pin = pinList[idx].pin;
+    auto pin = board->getPin(idx);
     const auto state = pwm.find(pin)->second;
     state->period = 0;
     state->cycle_rate = 0;
@@ -371,7 +252,7 @@ void PinManager::closePwm(int idx) {
 }
 
 bool PinManager::setPwmEnable(int idx, bool enabled) {
-    auto pin = pinList[idx].pin;
+    auto pin = board->getPin(idx);
     const auto state = pwm.find(pin)->second;
 
     writeSysfsTo(state->enablePath, (enabled?"1":"0"));
@@ -379,7 +260,7 @@ bool PinManager::setPwmEnable(int idx, bool enabled) {
 }
 
 bool PinManager::setPwmDutyCycle(int idx, double cycle_rate) {
-    auto pin = pinList[idx].pin;
+    auto pin = board->getPin(idx);
     const auto state = pwm.find(pin)->second;
     unsigned int duty_cycle = (state->period / 100) * cycle_rate;
 
@@ -392,7 +273,7 @@ bool PinManager::setPwmDutyCycle(int idx, double cycle_rate) {
 
 #define HERTZTONANOSECOND 1000000000
 bool PinManager::setPwmFrequency(int idx, double frequency_hz) {
-    auto pin = pinList[idx].pin;
+    auto pin = board->getPin(idx);
     const auto state = pwm.find(pin)->second;
 
     state->period = HERTZTONANOSECOND / frequency_hz;
@@ -410,6 +291,7 @@ bool PinManager::setPwmFrequency(int idx, double frequency_hz) {
 #include <linux/i2c-dev.h>
 
 void PinManager::openI2c(int nameIdx, uint32_t address, int idx) {
+    auto i2cList = board->getI2cList();
     int i2cFd = open(i2cList[nameIdx].path.c_str(), O_RDWR);
     if (i2cFd < 0) {
         ALOGD("oepn i2c is failed!");
@@ -454,29 +336,25 @@ Result PinManager::writeRegBufferI2c(int idx, uint32_t reg, std::vector<uint8_t>
 }
 
 std::unique_ptr<Uart> PinManager::getUart() {
-
-    if (uartList) {
-        std::vector<uart_t> list;
-        for (int i=0; i < uartNum; i++) {
-            if (access(uartList[i].path.c_str(), F_OK) == 0)
-                list.push_back(uartList[i]);
-        }
-        if (list.size()) {
-            auto uart = std::make_unique<Uart>(list);
-            return uart;
-        }
-        else
-            return NULL;
+    auto uartList = board->getUartList();
+    std::vector<uart_t> list;
+    for (auto uart = uartList.begin(); uart != uartList.end(); uart++) {
+        if (access(uart->path.c_str(), F_OK) == 0)
+            list.push_back(*uart);
     }
-    return NULL;
+
+    if (list.size()) {
+        auto uart = std::make_unique<Uart>(list);
+        return uart;
+    } else
+        return NULL;
 }
 
 std::unique_ptr<Spi> PinManager::getSpi() {
-    if (spiList) {
-        if (access(spiList->path.c_str(), F_OK) == 0) {
-            auto spi = std::make_unique<Spi>(spiList);
-            return spi;
-        }
+    auto spiList = board->getSpiList();
+    if (access(spiList[0].path.c_str(), F_OK) == 0) {
+        std::unique_ptr<Spi> spi = std::make_unique<Spi>(spiList);
+        return spi;
     }
     return NULL;
 }

@@ -26,16 +26,14 @@
 #include <fstream>
 #include <string>
 
+#include "Board.h"
 #include "Uart.h"
 #include "Spi.h"
 
 #define BOARD_PROPERTY "ro.product.device"
 
 using hardware::hardkernel::odroidthings::pin_t;
-using hardware::hardkernel::odroidthings::i2c_t;
-using hardware::hardkernel::odroidthings::pwm_t;
 using hardware::hardkernel::odroidthings::uart_t;
-using hardware::hardkernel::odroidthings::spi_t;
 using hardware::hardkernel::odroidthings::function_t;
 
 struct pwmState{
@@ -52,13 +50,7 @@ struct pwmState{
 
 class PinManager {
     private:
-        std::string board;
-        pin_t *pinList;
-        i2c_t *i2cList;
-        pwm_t *pwmList;
-        uart_t *uartList;
-        uint8_t uartNum;
-        spi_t *spiList;
+        Board *board;
         int triggerType[PIN_MAX] = {INT_EDGE_SETUP,};
         std::map<int, pwmState *> pwm;
         std::map<int, int> i2c;

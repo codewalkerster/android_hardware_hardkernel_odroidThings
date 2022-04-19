@@ -17,24 +17,23 @@
  */
 
 #include "Spi.h"
-
 #include <cutils/log.h>
-#include <linux/types.h>
-#include <linux/spi/spidev.h>
 #include <errno.h>
+#include <linux/spi/spidev.h>
+#include <linux/types.h>
 #include <mutex>
 
 Spi::Spi() {
 }
 
-Spi::Spi(spi_t *list) {
+Spi::Spi(std::vector<spi_t> list) {
     spiList = list;
 }
 
 std::vector<std::string> Spi::getList() {
     std::vector<std::string> list;
-    for (int i=0; i<SPI_MAX; i++)
-        list.push_back(spiList[i].name);
+    for(auto spi = spiList.begin(); spi != spiList.end(); spi++)
+        list.push_back(spi->name);
     return list;
 }
 

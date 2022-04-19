@@ -16,17 +16,15 @@
  *    If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <hardware/hardware.h>
-#include <hardware/odroidThings.h>
-
-#include <cutils/log.h>
-#include <utils/Mutex.h>
-
-#include <string>
-#include <vector>
-#include <memory>
 #include "PinManager.h"
 #include "Uart.h"
+#include <cutils/log.h>
+#include <hardware/hardware.h>
+#include <hardware/odroidThings.h>
+#include <memory>
+#include <string>
+#include <utils/Mutex.h>
+#include <vector>
 
 using hardware::hardkernel::odroidthings::things_device_t;
 using hardware::hardkernel::odroidthings::things_module_t;

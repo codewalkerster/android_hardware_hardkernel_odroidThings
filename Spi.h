@@ -19,12 +19,10 @@
 #ifndef SPI_H_
 #define SPI_H_
 
-#include <map>
-#include <vector>
-
-#include <unistd.h>
-
 #include <hardware/odroidThings.h>
+#include <map>
+#include <unistd.h>
+#include <vector>
 
 using hardware::hardkernel::odroidthings::spi_t;
 
@@ -40,13 +38,13 @@ struct spiState {
 
 class Spi {
     private:
-        spi_t *spiList;
+        std::vector<spi_t> spiList;
         std::map<int, spiState> spi;
         Spi();
         int applyMode(const int index);
 
     public:
-        Spi(spi_t * list);
+        Spi(std::vector<spi_t> list);
         std::vector<std::string> getList();
         void open(const int index);
         void close(const int index);

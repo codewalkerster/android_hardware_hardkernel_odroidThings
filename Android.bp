@@ -20,6 +20,10 @@
 cc_library_shared {
     relative_install_path: "hw",
     srcs: [
+        "Board.cpp",
+        "OdroidC4.cpp",
+        "OdroidM1.cpp",
+        "OdroidN2.cpp",
         "odroidThings.cpp",
         "PinManager.cpp",
         "Uart.cpp",

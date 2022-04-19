@@ -19,13 +19,11 @@
 #ifndef UART_H_
 #define UART_H_
 
+#include <hardware/odroidThings.h>
 #include <map>
-#include <vector>
-
 #include <termios.h>
 #include <unistd.h>
-
-#include <hardware/odroidThings.h>
+#include <vector>
 
 using hardware::hardkernel::odroidthings::uart_t;
 
