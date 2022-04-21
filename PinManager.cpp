@@ -94,15 +94,10 @@ std::vector<std::string> PinManager::getListOf(int mode) {
 
             for (auto pin = pinList.begin(); pin != pinList.end(); pin++) {
                 if (pin->availableModes & PIN_PWM) {
-                    int alt = getAlt(pin->pin);
-                    if (alt < 2) {
+                    if (pwm.count(pin->pin) > 0) {
                         list.push_back(pin->name);
                     }
-                    if ((pin->pin < 4) && (alt == 2))
-                        list.push_back(pin->name);
-                    else if ((pin->pin > 22) && (alt == 5))
-                        list.push_back(pin->name);
-               }
+                }
             }
             break;
         }
@@ -185,8 +180,6 @@ void PinManager::unregisterCallback(int idx) {
 
 #define PWM_RANGE_MAX 65535
 
-//TODO: reduce pwm array size to fit the pwm number.
-
 int PinManager::initPwm() {
     auto list = board->getPwmList();
     for (auto pin = list.begin(); pin != list.end(); pin++)
@@ -204,15 +197,17 @@ void PinManager::initPwmState(int idx, uint8_t chip, uint8_t node) {
     // init configuration sysfs path.
     std::ostringstream pwmRoot;
 
-    pwmRoot << "/sys/class/pwm/pwmchip" << std::to_string(state->chip)
-        << "/pwm" << std::to_string(state->node) <<"/";
-	std::string pwmRootStr = pwmRoot.str();
+    pwmRoot << "/sys/class/pwm/pwmchip" << std::to_string(state->chip);
+    if (access(pwmRoot.str().c_str(), F_OK) == 0) {
+        pwmRoot << "/pwm" << std::to_string(state->node) <<"/";
+        std::string pwmRootStr = pwmRoot.str();
 
-    state->periodPath =  pwmRootStr + "period";
-    state->dutyCyclePath = pwmRootStr + "duty_cycle";
-    state->enablePath = pwmRootStr + "enable";
+        state->periodPath =  pwmRootStr + "period";
+        state->dutyCyclePath = pwmRootStr + "duty_cycle";
+        state->enablePath = pwmRootStr + "enable";
 
-    pwm.insert(std::make_pair(idx, state));
+        pwm.insert(std::make_pair(idx, state));
+    }
 }
 
 inline void PinManager::writeSysfsTo(const std::string path, const std::string value) {
