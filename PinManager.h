@@ -33,7 +33,6 @@
 #define BOARD_PROPERTY "ro.product.device"
 
 using hardware::hardkernel::odroidthings::pin_t;
-using hardware::hardkernel::odroidthings::uart_t;
 using hardware::hardkernel::odroidthings::function_t;
 
 struct pwmState{
@@ -52,7 +51,7 @@ class PinManager {
     private:
         Board *board;
         int triggerType[PIN_MAX] = {INT_EDGE_SETUP,};
-        std::map<int, pwmState *> pwm;
+        std::map<int, std::shared_ptr<pwmState>> pwm;
         std::map<int, int> i2c;
 
         int initPwm();

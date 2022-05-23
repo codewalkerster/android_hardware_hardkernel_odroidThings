@@ -21,27 +21,37 @@
 
 #include <hardware/odroidThings.h>
 #include <map>
+#include <pthread.h>
 #include <termios.h>
 #include <unistd.h>
 #include <vector>
 
 using hardware::hardkernel::odroidthings::uart_t;
+using hardware::hardkernel::odroidthings::function_t;
 
 struct uartState {
     int fd;
     struct termios option;
+    struct termios backup_option;
+    struct termios backup_callback_option;
 
     uint8_t hwFlowControl;
     uint8_t parity;
     uint8_t controlLine;
+
+    pthread_t callbackThread;
+    pthread_mutex_t mutex;
+    function_t callback;
 };
 
 class Uart {
     private:
         std::vector<uart_t> uartList;
-        std::map<int, uartState> uart;
+        std::map<int, std::shared_ptr<uartState>> uart;
         Uart();
         uint32_t getBaudrate(const int baudrate);
+
+        void callbackRun(const int index);
 
     public:
         Uart(std::vector<uart_t> list);
@@ -57,6 +67,9 @@ class Uart {
         bool setStopBits(const int index, const int bits);
         std::vector<uint8_t> read(const int index, const int length);
         ssize_t write(const int index, const std::vector<uint8_t> data, const int length);
+
+        void registerCallback(const int index, function_t callback);
+        void unregisterCallback(const int index);
 
         /*
          * The modem control feature is not used, No implimented.

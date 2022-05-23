@@ -189,7 +189,7 @@ int PinManager::initPwm() {
 }
 
 void PinManager::initPwmState(int idx, uint8_t chip, uint8_t node) {
-    const auto state = new pwmState();
+    const auto state = std::make_shared<pwmState>();
     // init chip & node info
     state->chip = chip;
     state->node = node;

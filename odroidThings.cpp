@@ -188,11 +188,11 @@ static ssize_t things_uart_write(int idx, std::vector<uint8_t> buffer, int lengt
 }
 
 static void things_uart_registerCallback(int idx, function_t callback) {
-    //gUart->registerCallback(idx, callback);
+    gUart->registerCallback(idx, callback);
 }
 
 static void things_uart_unregisterCallback(int idx) {
-    //gUart->unregisterCallback(idx);
+    gUart->unregisterCallback(idx);
 }
 
 static void things_spi_open(int idx) {
