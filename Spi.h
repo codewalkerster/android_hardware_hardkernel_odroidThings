@@ -39,7 +39,7 @@ struct spiState {
 class Spi {
     private:
         std::vector<spi_t> spiList;
-        std::map<int, spiState> spi;
+        std::map<int, std::shared_ptr<spiState>> spi;
         Spi();
         int applyMode(const int index);
 

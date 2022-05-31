@@ -54,7 +54,6 @@ static const std::vector<std::string> things_getPinNameList() {
 }
 
 static const std::vector<std::string> things_getListOf(int mode) {
-    std::vector<std::string> emptyList;
     switch (mode) {
         case PIN_UART:
             if(gUart)

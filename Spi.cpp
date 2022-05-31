@@ -44,45 +44,45 @@ void Spi::open(const int index) {
         return;
     }
 
-    spiState state;
-    state.fd = fd;
+    const auto state = std::make_shared<spiState>();
+    state->fd = fd;
 
     //Set default value
-    state.mode = 0;
-    state.frequency = 1000000;
-    state.bits = 8;
-    state.csChange = 0;
-    state.delay = 0;
+    state->mode = 0;
+    state->frequency = 1000000;
+    state->bits = 8;
+    state->csChange = 0;
+    state->delay = 0;
 
     int ret = 0;
 
-    ret = ioctl(state.fd, SPI_IOC_WR_MODE, &state.mode);
-    ret = ioctl(state.fd, SPI_IOC_RD_MODE, &state.mode);
+    ret = ioctl(state->fd, SPI_IOC_WR_MODE, &(state->mode));
+    ret = ioctl(state->fd, SPI_IOC_RD_MODE, &(state->mode));
 
-    ret = ioctl(state.fd, SPI_IOC_WR_BITS_PER_WORD, &state.bits);
-    ret = ioctl(state.fd, SPI_IOC_RD_BITS_PER_WORD, &state.bits);
+    ret = ioctl(state->fd, SPI_IOC_WR_BITS_PER_WORD, &(state->bits));
+    ret = ioctl(state->fd, SPI_IOC_RD_BITS_PER_WORD, &(state->bits));
 
-    ret = ioctl(state.fd, SPI_IOC_WR_MAX_SPEED_HZ, &state.frequency);
-    ret = ioctl(state.fd, SPI_IOC_RD_MAX_SPEED_HZ, &state.frequency);
+    ret = ioctl(state->fd, SPI_IOC_WR_MAX_SPEED_HZ, &(state->frequency));
+    ret = ioctl(state->fd, SPI_IOC_RD_MAX_SPEED_HZ, &(state->frequency));
 
     spi.insert(std::make_pair(index, state));
 }
 
 void Spi::close(const int index) {
     const auto state = spi.find(index)->second;
-    ::close(state.fd);
+    ::close(state->fd);
     spi.erase(index);
 }
 
 int Spi::setBitJustification(const int index, const uint8_t justification) {
-    auto iterator = spi.find(index);
+    const auto state = spi.find(index)->second;
 
     switch (justification) {
         case 0: // MSB_FIRST
-            iterator->second.mode &= ~SPI_LSB_FIRST;
+            state->mode &= ~SPI_LSB_FIRST;
             break;
         case 1: // LSB_FIRST
-            iterator->second.mode |= SPI_LSB_FIRST;
+            state->mode |= SPI_LSB_FIRST;
             break;
     }
 
@@ -90,10 +90,10 @@ int Spi::setBitJustification(const int index, const uint8_t justification) {
 }
 
 int Spi::setBitsPerWord(const int index, const uint8_t bits) {
-    auto iterator = spi.find(index);
-    iterator->second.bits = bits;
+    const auto state = spi.find(index)->second;
+    state->bits = bits;
     int ret = 0;
-    int fd = iterator->second.fd;
+    int fd = state->fd;
 
     ret = ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
     if (ret == -1) {
@@ -101,7 +101,7 @@ int Spi::setBitsPerWord(const int index, const uint8_t bits) {
         return ret;
     }
 
-    ret = ioctl(fd, SPI_IOC_RD_BITS_PER_WORD, &bits);
+    ret = ioctl(fd, SPI_IOC_RD_BITS_PER_WORD, &(state->bits));
     if (ret == -1)
         ALOGE("can't get bits per word");
 
@@ -109,22 +109,22 @@ int Spi::setBitsPerWord(const int index, const uint8_t bits) {
 }
 
 int Spi::setMode(const int index, const uint8_t mode) {
-    auto iterator = spi.find(index);
+    const auto state = spi.find(index)->second;
 
-    iterator->second.mode &= ~SPI_MODE_3;
+    state->mode &= ~SPI_MODE_3;
 
     switch (mode) {
         case 0: // MODE_0
-            iterator->second.mode |= SPI_MODE_0;
+            state->mode |= SPI_MODE_0;
             break;
         case 1: // MODE_1
-            iterator->second.mode |= SPI_MODE_1;
+            state->mode |= SPI_MODE_1;
             break;
         case 2: // MODE_2
-            iterator->second.mode |= SPI_MODE_2;
+            state->mode |= SPI_MODE_2;
             break;
         case 3: // MODE_3
-            iterator->second.mode |= SPI_MODE_3;
+            state->mode |= SPI_MODE_3;
             break;
     }
 
@@ -132,31 +132,25 @@ int Spi::setMode(const int index, const uint8_t mode) {
 }
 
 int Spi::setCsChange(const int index, const bool csChange) {
-    auto iterator = spi.find(index);
+    const auto state = spi.find(index)->second;
 
-    iterator->second.csChange = csChange ? 1 : 0;
+    state->csChange = csChange ? 1 : 0;
 
-    if (csChange) {
-        iterator->second.mode |= SPI_CS_HIGH;
-    } else {
-        iterator->second.mode &= ~SPI_CS_HIGH;
-    }
-
-    return applyMode(index);
+    return 0;
 }
 
 int Spi::setDelay(const int index, const uint16_t delay) {
-    auto iterator = spi.find(index);
+    const auto state = spi.find(index)->second;
 
-    iterator->second.delay = delay;
+    state->delay = delay;
 
     return 0;
 }
 
 int Spi::setFrequency(const int index, const uint32_t frequency) {
-    auto iterator = spi.find(index);
-    int fd = iterator->second.fd;
-    iterator->second.frequency = frequency;
+    const auto state = spi.find(index)->second;
+    int fd = state->fd;
+    state->frequency = frequency;
     int ret = 0;
 
     ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &frequency);
@@ -165,7 +159,7 @@ int Spi::setFrequency(const int index, const uint32_t frequency) {
         return ret;
     }
 
-    ret = ioctl(fd, SPI_IOC_RD_MAX_SPEED_HZ, &frequency);
+    ret = ioctl(fd, SPI_IOC_RD_MAX_SPEED_HZ, &(state->frequency));
     if (ret == -1) {
         ALOGE("Failed to get spi max speed");
     }
@@ -177,13 +171,13 @@ inline int Spi::applyMode(const int index) {
     auto state = spi.find(index)->second;
     int ret = 0;
 
-    ret = ioctl(state.fd, SPI_IOC_WR_MODE, &state.mode);
+    ret = ioctl(state->fd, SPI_IOC_WR_MODE, &(state->mode));
     if (ret == -1) {
         ALOGE("Failed to set spi write mode");
         return ret;
     }
 
-    ret = ioctl(state.fd, SPI_IOC_RD_MODE, &state.mode);
+    ret = ioctl(state->fd, SPI_IOC_RD_MODE, &(state->mode));
     if (ret == -1)
         ALOGE("Failed to get spi read mode");
 
@@ -205,24 +199,24 @@ int Spi::read(const int index, const uint8_t *rx, const int length) {
         trans.rx_buf = (unsigned long)&rx[start_index];
         trans.len = (left_length > SPI_LENGTH_MAX)?
             SPI_LENGTH_MAX: left_length;
-        trans.delay_usecs = state.delay;
-        trans.speed_hz = state.frequency;
-        trans.bits_per_word = state.bits;
-        trans.cs_change = state.csChange;
+        trans.delay_usecs = state->delay;
+        trans.speed_hz = state->frequency;
+        trans.bits_per_word = state->bits;
+        trans.cs_change = state->csChange;
 
         left_length -= SPI_LENGTH_MAX;
         start_index += SPI_LENGTH_MAX;
 
-        int ret = ioctl(state.fd, SPI_IOC_MESSAGE(1), &trans);
+        int ret = ioctl(state->fd, SPI_IOC_MESSAGE(1), &trans);
 
         if (ret < 0) {
             std::string errMessage(strerror(errno));
             ALOGE("Failed to do read on SPI BUS %d, ret: (%d) Error message: %s",
-                    state.fd, ret, errMessage.c_str());
+                    state->fd, ret, errMessage.c_str());
 
             if (errno == 22) {
                 ALOGE("length - %d, delay - %d, speed- %d, bits- %d, cs_change - %x",
-                        length, state.delay, state.frequency, state.bits, state.csChange);
+                        length, state->delay, state->frequency, state->bits, state->csChange);
             }
 
             return ret;
@@ -245,24 +239,24 @@ int Spi::write(const int index, const uint8_t *tx, const int length) {
         trans.tx_buf = (unsigned long)&tx[start_index];
         trans.len = (left_length > SPI_LENGTH_MAX)?
             SPI_LENGTH_MAX: left_length;
-        trans.delay_usecs = state.delay;
-        trans.speed_hz = state.frequency;
-        trans.bits_per_word = state.bits;
-        trans.cs_change = state.csChange;
+        trans.delay_usecs = state->delay;
+        trans.speed_hz = state->frequency;
+        trans.bits_per_word = state->bits;
+        trans.cs_change = state->csChange;
 
         left_length -= SPI_LENGTH_MAX;
         start_index += SPI_LENGTH_MAX;
 
-        int ret = ioctl(state.fd, SPI_IOC_MESSAGE(1), &trans);
+        int ret = ioctl(state->fd, SPI_IOC_MESSAGE(1), &trans);
 
         if (ret < 0) {
             std::string errMessage(strerror(errno));
             ALOGE("Failed to do write on SPI BUS %d, ret: (%d) Error message: %s",
-                    state.fd, ret, errMessage.c_str());
+                    state->fd, ret, errMessage.c_str());
 
             if (errno == 22) {
                 ALOGE("length - %d, delay - %d, speed- %d, bits- %d, cs_change - %x",
-                        length, state.delay, state.frequency, state.bits, state.csChange);
+                        length, state->delay, state->frequency, state->bits, state->csChange);
             }
 
             return ret;
@@ -286,24 +280,24 @@ int Spi::transfer(const int index, const uint8_t *tx, const uint8_t *rx, const i
         trans.rx_buf = (unsigned long)&rx[start_index];
         trans.len = (left_length > SPI_LENGTH_MAX)?
             SPI_LENGTH_MAX: left_length;
-        trans.delay_usecs = state.delay;
-        trans.speed_hz = state.frequency;
-        trans.bits_per_word = state.bits;
-        trans.cs_change = state.csChange;
+        trans.delay_usecs = state->delay;
+        trans.speed_hz = state->frequency;
+        trans.bits_per_word = state->bits;
+        trans.cs_change = state->csChange;
 
         left_length -= SPI_LENGTH_MAX;
         start_index += SPI_LENGTH_MAX;
 
-        int ret = ioctl(state.fd, SPI_IOC_MESSAGE(1), &trans);
+        int ret = ioctl(state->fd, SPI_IOC_MESSAGE(1), &trans);
 
         if (ret < 0) {
             std::string errMessage(strerror(errno));
             ALOGE("Failed to do transfer on SPI BUS %d, ret: (%d) Error message: %s",
-                    state.fd, ret, errMessage.c_str());
+                    state->fd, ret, errMessage.c_str());
 
             if (errno == 22) {
                 ALOGE("length - %d, delay - %d, speed- %d, bits- %d, cs_change - %x",
-                        length, state.delay, state.frequency, state.bits, state.csChange);
+                        length, state->delay, state->frequency, state->bits, state->csChange);
             }
 
             return ret;
