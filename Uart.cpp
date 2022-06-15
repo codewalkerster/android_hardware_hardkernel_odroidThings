@@ -53,6 +53,7 @@ void Uart::open(const int index) {
         state->backup_option = state->option;
 
         state->option.c_lflag &= ~ECHO;
+        state->option.c_lflag &= ~ICANON;
         state->option.c_iflag &= ~ICRNL;
         tcsetattr(fd, TCSANOW, &(state->option));
 
@@ -296,7 +297,7 @@ bool Uart::setStopBits(const int index, const int bits) {
 std::vector<uint8_t> Uart::read(const int index, const int length) {
     const auto state = uart.find(index)->second;
 
-    uint8_t *buffer = new uint8_t[length];
+    uint8_t *buffer = new uint8_t[length]{};
     auto ret = ::read(state->fd, buffer, length);
     if (ret < 0) {
         delete[] buffer;
@@ -327,7 +328,12 @@ void Uart::registerCallback(const int index, function_t callback) {
     if (state->callback == NULL) {
         pthread_mutex_lock(&(state->mutex));
         state->callback = callback;
+        state->backup_callback_option = state->option;
         pthread_mutex_unlock(&(state->mutex));
+
+        int flags = fcntl(state->fd, F_GETFL, 0);
+        flags |= O_NONBLOCK;
+        fcntl(state->fd, F_SETFL, flags);
 
         std::thread callbackThread = std::thread(&Uart::callbackRun, this, index);
         state->callbackThread = callbackThread.native_handle();
@@ -342,13 +348,13 @@ void Uart::unregisterCallback(const int index) {
     pthread_mutex_lock(&(state->mutex));
     ALOGD("unregister callback - %d", ret);
     state->callback = NULL;
+    state->option = state->backup_callback_option;
     pthread_mutex_unlock(&(state->mutex));
 
     int flags = fcntl(state->fd, F_GETFL, 0);
     flags &= ~O_NONBLOCK;
-    fcntl(state->fd, F_SETFL, &flags);
+    fcntl(state->fd, F_SETFL, flags);
 
-    state->option = state->backup_callback_option;
     tcsetattr(state->fd, TCSANOW, &(state->option));
 }
 
@@ -363,13 +369,8 @@ void Uart::callbackRun(const int index) {
 
     int timeout = 1000;
 
-    int flags = fcntl(state->fd, F_GETFL, 0);
-    flags |= O_NONBLOCK;
-    fcntl(state->fd, F_SETFL, &flags);
-
     state->option.c_cc[VMIN] = 1;
     state->option.c_cc[VTIME] = 0;
-    state->option.c_iflag = IGNBRK;
 
     tcflush(state->fd, TCIOFLUSH);
     tcsetattr(state->fd, TCSANOW, &(state->option));
@@ -387,19 +388,17 @@ void Uart::callbackRun(const int index) {
     while (1) {
         int event_count;
         event_count = epoll_wait(epfd, events, MAX_EVENTS, timeout);
-        ALOGD("event_count -  %d", event_count);
 
-        ALOGD("callback - %ld", (long)state->callback);
         pthread_mutex_lock(&(state->mutex));
         if (state->callback == NULL) {
             ALOGE("call back is null!");
             pthread_mutex_unlock(&(state->mutex));
             return;
         }
-        pthread_mutex_unlock(&(state->mutex));
 
         if (event_count < 0) {
             ALOGE("err epoll_count %d", event_count);
+            pthread_mutex_unlock(&(state->mutex));
             return;
         }
 
@@ -410,5 +409,6 @@ void Uart::callbackRun(const int index) {
                 ALOGE("this is not fd callback");
             }
         }
+        pthread_mutex_unlock(&(state->mutex));
     }
 }
