@@ -33,6 +33,7 @@
 PinManager::PinManager(){
     char boardName[PROPERTY_VALUE_MAX];
     std::string name;
+    isUnknown= false;
 
     property_get(BOARD_PROPERTY, boardName, NULL);
     name = boardName;
@@ -45,6 +46,7 @@ PinManager::PinManager(){
         board = new OdroidM1();
     else {
         board = new Board(name);
+        isUnknown= true;
         ALOGD("Board is not initialized");
         return;
     }
@@ -53,6 +55,9 @@ PinManager::PinManager(){
 }
 
 int PinManager::init() {
+    if (isUnknownBoard())
+        return -1;
+
     if (wiringPiSetup()) {
         ALOGD("Board is not initialized");
         return -1;
@@ -64,6 +69,28 @@ int PinManager::init() {
     }
 
     return 0;
+}
+
+bool PinManager::isUnknownBoard() {
+    if (isUnknown)
+        return true;
+
+    std::ifstream modelName ("/proc/device-tree/model");
+    if (modelName.fail())
+        return true;
+
+    std::string name;
+    modelName >> name;
+    modelName.close();
+
+    std::size_t pos = name.find('-');
+    name = name.substr(pos + 1);
+
+    for(const auto& model: models)
+        if (model.find(name) != std::string::npos)
+            return false;
+
+    return true;
 }
 
 std::vector<pin_t> PinManager::getPinList() {

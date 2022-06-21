@@ -53,12 +53,25 @@ class PinManager {
         int triggerType[PIN_MAX] = {INT_EDGE_SETUP,};
         std::map<int, std::shared_ptr<pwmState>> pwm;
         std::map<int, int> i2c;
+        bool isUnknown;
+
+        std::vector<std::string> models = {
+            "C1/C1+",
+            "C2",
+            "XU3/XU4",
+            "N1",
+            "N2/N2Plus",
+            "C4",
+            "HC4",
+            "M1",
+        };
 
         int initPwm();
 
         // helper function
         void initPwmState(int idx, uint8_t chip, uint8_t node);
         void writeSysfsTo(const std::string path, const std::string value);
+        bool isUnknownBoard();
 
         enum ActiveType {
             ACTIVE_LOW,
