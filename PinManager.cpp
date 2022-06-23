@@ -80,11 +80,16 @@ bool PinManager::isUnknownBoard() {
         return true;
 
     std::string name;
-    modelName >> name;
+    while(!modelName.eof()) {
+        modelName >> name;
+        if (name.find("ODROID") != std::string::npos)
+            break;
+    }
     modelName.close();
 
-    std::size_t pos = name.find('-');
+    std::size_t pos = name.find("-");
     name = name.substr(pos + 1);
+    name.pop_back();
 
     for(const auto& model: models)
         if (model.find(name) != std::string::npos)
