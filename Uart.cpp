@@ -389,13 +389,12 @@ void Uart::callbackRun(const int index) {
         int event_count;
         event_count = epoll_wait(epfd, events, MAX_EVENTS, timeout);
 
-        pthread_mutex_lock(&(state->mutex));
         if (state->callback == NULL) {
             ALOGE("call back is null!");
-            pthread_mutex_unlock(&(state->mutex));
             return;
         }
 
+        pthread_mutex_lock(&(state->mutex));
         if (event_count < 0) {
             ALOGE("err epoll_count %d", event_count);
             pthread_mutex_unlock(&(state->mutex));
