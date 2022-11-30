@@ -60,7 +60,7 @@ class PinManager {
             "C2",
             "XU3/XU4",
             "N1",
-            "N2/N2Plus",
+            "N2/N2Plus/N2L",
             "C4",
             "HC4",
             "M1",
