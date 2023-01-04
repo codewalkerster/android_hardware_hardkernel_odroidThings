@@ -16,6 +16,11 @@
  *    If not, see <http://www.gnu.org/licenses/>.
  */
 
+cc_library_static {
+    name: "libRingBuffer",
+    srcs: ["ring_buffer/ringbuffer.c"],
+    vendor: true,
+}
 
 cc_library_shared {
     relative_install_path: "hw",
@@ -36,7 +41,10 @@ cc_library_shared {
         "system/core/libutils/include",
         "system/core/libsystem/include",
         "vendor/hardkernel/external/wiringPi",
+        "hardware/hardkernel/odroidThings/ring_buffer",
     ],
+
+    static_libs: ["libRingBuffer"],
 
     shared_libs: [
         "liblog",
