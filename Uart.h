@@ -25,9 +25,13 @@
 #include <termios.h>
 #include <unistd.h>
 #include <vector>
+#include "ringbuffer.h"
 
 using hardware::hardkernel::odroidthings::uart_t;
 using hardware::hardkernel::odroidthings::function_t;
+
+#define UART_CALLBACK_SIZE_PROPERTY "persist.android.things.uart.callback.size"
+#define DEFAULT_BUFFER_SIZE "256"
 
 struct uartState {
     int fd;
@@ -42,6 +46,9 @@ struct uartState {
     pthread_t callbackThread;
     pthread_mutex_t mutex;
     function_t callback;
+
+    ring_buffer_t *readBuffer;
+    size_t callbackBufferSize;
 };
 
 class Uart {

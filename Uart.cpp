@@ -19,9 +19,11 @@
 #include "Uart.h"
 #include <cerrno>
 #include <cutils/log.h>
+#include <cutils/properties.h>
 #include <thread>
 #include <fcntl.h>
 #include <sys/epoll.h>
+#include <stdlib.h>
 
 Uart::Uart() {
 }
@@ -45,17 +47,26 @@ void Uart::open(const int index) {
     }
 
     {
+        char bufferSize[128];
         const auto state = std::make_shared<uartState>();
 
+        property_get(UART_CALLBACK_SIZE_PROPERTY,
+                bufferSize, DEFAULT_BUFFER_SIZE);
+        state->callbackBufferSize = atoi(bufferSize);
+        if (state->callbackBufferSize == 0)
+            state->callbackBufferSize = atoi(DEFAULT_BUFFER_SIZE);
         state->callback = NULL;
         state->fd = fd;
         tcgetattr(fd, &(state->option));
         state->backup_option = state->option;
 
-        state->option.c_lflag &= ~ECHO;
-        state->option.c_lflag &= ~ICANON;
-        state->option.c_iflag &= ~ICRNL;
+        state->option.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP
+                | INLCR | IGNCR | ICRNL | IXON);
+        state->option.c_oflag &= ~OPOST;
+        state->option.c_lflag &= ~(ECHO |ECHONL | ICANON | ISIG | IEXTEN);
         tcsetattr(fd, TCSANOW, &(state->option));
+
+        state->readBuffer = NULL;
 
         pthread_mutex_init(&state->mutex, NULL);
 
@@ -64,7 +75,7 @@ void Uart::open(const int index) {
 }
 
 void Uart::close(const int index) {
-    ALOGE("[%d] %s", __LINE__, __func__);
+    ALOGD("[%d] %s", __LINE__, __func__);
     auto state= uart.find(index)->second;
 
     tcsetattr(state->fd, TCSANOW, &(state->backup_option));
@@ -296,8 +307,9 @@ bool Uart::setStopBits(const int index, const int bits) {
 
 std::vector<uint8_t> Uart::read(const int index, const int length) {
     const auto state = uart.find(index)->second;
+    char *buffer = new char[length]{};
 
-    uint8_t *buffer = new uint8_t[length]{};
+    if (state->readBuffer == NULL) {
     auto ret = ::read(state->fd, buffer, length);
     if (ret < 0) {
         delete[] buffer;
@@ -308,6 +320,18 @@ std::vector<uint8_t> Uart::read(const int index, const int length) {
     delete[] buffer;
 
     return result;
+    } else {
+        auto ret = ring_buffer_dequeue_arr(state->readBuffer, buffer, (ring_buffer_size_t)length);
+    if (ret < 0) {
+        delete[] buffer;
+        std::vector<uint8_t> empty(0);
+        return empty;
+    }
+        std::vector<uint8_t> result (buffer, buffer + ret);
+        delete[] buffer;
+
+        return result;
+    }
 }
 
 ssize_t Uart::write(const int index, const std::vector<uint8_t> data, const int length) {
@@ -329,6 +353,11 @@ void Uart::registerCallback(const int index, function_t callback) {
         pthread_mutex_lock(&(state->mutex));
         state->callback = callback;
         state->backup_callback_option = state->option;
+
+        state->readBuffer = new ring_buffer_t;
+        char *buffer = new char[state->callbackBufferSize]{};
+        ring_buffer_init(state->readBuffer, buffer, state->callbackBufferSize);
+
         pthread_mutex_unlock(&(state->mutex));
 
         int flags = fcntl(state->fd, F_GETFL, 0);
@@ -349,6 +378,11 @@ void Uart::unregisterCallback(const int index) {
     ALOGD("unregister callback - %d", ret);
     state->callback = NULL;
     state->option = state->backup_callback_option;
+
+    delete[] state->readBuffer->buffer;
+    delete state->readBuffer;
+    state->readBuffer = NULL;
+
     pthread_mutex_unlock(&(state->mutex));
 
     int flags = fcntl(state->fd, F_GETFL, 0);
@@ -366,6 +400,7 @@ void Uart::callbackRun(const int index) {
     struct epoll_event ev;
     struct epoll_event events[MAX_EVENTS];
     int epfd;
+    char *buffer = new char[state->callbackBufferSize];
 
     int timeout = 1000;
 
@@ -382,6 +417,7 @@ void Uart::callbackRun(const int index) {
 
     if (ret < 0) {
         ALOGE("err epoll_ctl %i", errno);
+        delete[] buffer;
         return;
     }
 
@@ -391,23 +427,26 @@ void Uart::callbackRun(const int index) {
 
         if (state->callback == NULL) {
             ALOGE("call back is null!");
+            delete[] buffer;
             return;
         }
 
-        pthread_mutex_lock(&(state->mutex));
         if (event_count < 0) {
             ALOGE("err epoll_count %d", event_count);
-            pthread_mutex_unlock(&(state->mutex));
+            delete[] buffer;
             return;
         }
-
+        pthread_mutex_lock(&(state->mutex));
         for (int i=0; i < event_count; i++) {
-            if (events[i].data.fd == state->fd) {
-                state->callback();
+            auto length = ::read(state->fd, buffer, state->callbackBufferSize);
+            if (length < 0) {
+                ALOGE("read Error : %s", strerror(errno));
             } else {
-                ALOGE("this is not fd callback");
+                ring_buffer_queue_arr(state->readBuffer, buffer, length);
+                state->callback();
             }
         }
         pthread_mutex_unlock(&(state->mutex));
     }
+    delete[] buffer;
 }
