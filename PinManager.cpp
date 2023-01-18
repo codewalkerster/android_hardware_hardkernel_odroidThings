@@ -133,15 +133,6 @@ std::vector<std::string> PinManager::getListOf(int mode) {
             }
             break;
         }
-        case PIN_I2C: {
-            auto i2cList = board->getI2cList();
-
-            for (auto i2c = i2cList.begin(); i2c != i2cList.end(); i2c++) {
-                if (access(i2c->path.c_str(), F_OK) == 0)
-                    list.push_back(i2c->name);
-            }
-            break;
-        }
     }
     return list;
 }
@@ -314,52 +305,19 @@ bool PinManager::setPwmFrequency(int idx, double frequency_hz) {
     return true;
 }
 
-#include <unistd.h>
-#include <linux/i2c-dev.h>
-
-void PinManager::openI2c(int nameIdx, uint32_t address, int idx) {
+std::unique_ptr<I2c> PinManager::getI2c() {
     auto i2cList = board->getI2cList();
-    int i2cFd = open(i2cList[nameIdx].path.c_str(), O_RDWR);
-    if (i2cFd < 0) {
-        ALOGD("oepn i2c is failed!");
-        return;
+    std::vector<i2c_t> list;
+    for (auto i2c = i2cList.begin(); i2c != i2cList.end(); i2c++) {
+        if (access(i2c->path.c_str(), F_OK) == 0)
+            list.push_back(*i2c);
     }
-    if (ioctl(i2cFd, I2C_SLAVE, address) < 0) {
-        ALOGD("Failed to acquire bus access and/or talk to salve.\n");
-        return;
-    }
-    i2c.insert(std::make_pair(idx, i2cFd));
-}
 
-void PinManager::closeI2c(int idx) {
-    const auto i2cfd = i2c.find(idx)->second;
-    close(i2cfd);
-    i2c.erase(idx);
-}
-
-std::vector<uint8_t> PinManager::readRegBufferI2c(int idx, uint32_t reg, int length) {
-    const auto i2cfd = i2c.find(idx)->second;
-
-    uint8_t *buffer = new uint8_t[length];
-    write(i2cfd, &reg, 1);
-    read(i2cfd, buffer, length);
-    std::vector<uint8_t> result(buffer, buffer + length);
-    delete[] buffer;
-
-    return result;
-}
-
-Result PinManager::writeRegBufferI2c(int idx, uint32_t reg, std::vector<uint8_t> buffer, int length) {
-    const auto i2cfd = i2c.find(idx)->second;
-    uint8_t *msg = new uint8_t[length+1];
-
-    msg[0] = reg;
-    std::copy(buffer.begin(), buffer.end(), msg+1);
-
-    write(i2cfd, msg, length+1);
-    delete[] msg;
-
-    return Result::OK;
+    if (list.size()) {
+        auto i2c = std::make_unique<I2c>(list);
+        return i2c;
+    } else
+        return NULL;
 }
 
 std::unique_ptr<Uart> PinManager::getUart() {

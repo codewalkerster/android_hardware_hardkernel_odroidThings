@@ -31,8 +31,9 @@ using hardware::hardkernel::odroidthings::things_module_t;
 
 static android::Mutex thingsLock;
 static std::unique_ptr<PinManager> gPinManager;
-static std::unique_ptr<Uart> gUart;
+static std::unique_ptr<I2c> gI2c;
 static std::unique_ptr<Spi> gSpi;
+static std::unique_ptr<Uart> gUart;
 
 static void things_init() {
     gPinManager = std::make_unique<PinManager>();
@@ -41,8 +42,9 @@ static void things_init() {
         return;
     }
 
-    gUart = gPinManager->getUart();
+    gI2c = gPinManager->getI2c();
     gSpi = gPinManager->getSpi();
+    gUart = gPinManager->getUart();
 }
 
 static const std::vector<pin_t> things_getPinList() {
@@ -55,13 +57,17 @@ static const std::vector<std::string> things_getPinNameList() {
 
 static const std::vector<std::string> things_getListOf(int mode) {
     switch (mode) {
-        case PIN_UART:
-            if(gUart)
-                return gUart->getList();
+        case PIN_I2C:
+            if(gI2c)
+                return gI2c->getList();
             break;
         case PIN_SPI:
             if(gSpi)
                 return gSpi->getList();
+            break;
+        case PIN_UART:
+            if(gUart)
+                return gUart->getList();
             break;
     }
     return gPinManager->getListOf(mode);
@@ -127,19 +133,43 @@ static bool things_pwm_setFrequency(int pin, double frequency_hz) {
 }
 
 static void things_i2c_open(int nameIdx, uint32_t address, int idx) {
-    gPinManager->openI2c(nameIdx, address, idx);
+    gI2c->open(nameIdx, address, idx);
 }
 
 static void things_i2c_close(int idx) {
-    gPinManager->closeI2c(idx);
+    gI2c->close(idx);
+}
+
+static const std::vector<uint8_t> things_i2c_read(int idx, int length) {
+    return gI2c->read(idx, length);
 }
 
 static const std::vector<uint8_t> things_i2c_readRegBuffer(int idx, uint32_t reg, int length) {
-    return gPinManager->readRegBufferI2c(idx, reg, length);
+    return gI2c->readRegBuffer(idx, reg, length);
+}
+
+static uint16_t things_i2c_readRegWord(int idx, uint32_t reg) {
+    return gI2c->readRegWord(idx, reg);
+}
+
+static uint8_t things_i2c_readRegByte(int idx, uint32_t reg) {
+    return gI2c->readRegByte(idx, reg);
+}
+
+static Result things_i2c_write(int idx, std::vector<uint8_t> buffer, int length) {
+    return gI2c->write(idx, buffer, length);
 }
 
 static Result things_i2c_writeRegBuffer(int idx, uint32_t reg, std::vector<uint8_t> buffer, int length) {
-    return gPinManager->writeRegBufferI2c(idx, reg, buffer, length);
+    return gI2c->writeRegBuffer(idx, reg, buffer, length);
+}
+
+static Result things_i2c_writeRegWord(int idx, uint32_t reg, uint16_t buffer) {
+    return gI2c->writeRegWord(idx, reg, buffer);
+}
+
+static Result things_i2c_writeRegByte(int idx, uint32_t reg, uint8_t buffer) {
+    return gI2c->writeRegByte(idx, reg, buffer);
 }
 
 static void things_uart_open(int idx) {
@@ -341,8 +371,14 @@ static int things_open(const hw_module_t *module, const char __unused *id,
 
     dev->i2c_ops.open = things_i2c_open;
     dev->i2c_ops.close = things_i2c_close;
+    dev->i2c_ops.read = things_i2c_read;
     dev->i2c_ops.readRegBuffer = things_i2c_readRegBuffer;
+    dev->i2c_ops.readRegWord = things_i2c_readRegWord;
+    dev->i2c_ops.readRegByte = things_i2c_readRegByte;
+    dev->i2c_ops.write = things_i2c_write;
     dev->i2c_ops.writeRegBuffer = things_i2c_writeRegBuffer;
+    dev->i2c_ops.writeRegWord = things_i2c_writeRegWord;
+    dev->i2c_ops.writeRegByte = things_i2c_writeRegByte;
 
     // Modem Control feature will not be supported.
     dev->uart_ops.open = things_uart_open;

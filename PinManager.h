@@ -27,8 +27,9 @@
 #include <string>
 
 #include "Board.h"
-#include "Uart.h"
+#include "I2c.h"
 #include "Spi.h"
+#include "Uart.h"
 
 #define BOARD_PROPERTY "ro.product.device"
 
@@ -52,7 +53,6 @@ class PinManager {
         Board *board;
         int triggerType[PIN_MAX] = {INT_EDGE_SETUP,};
         std::map<int, std::shared_ptr<pwmState>> pwm;
-        std::map<int, int> i2c;
         bool isUnknown;
 
         std::vector<std::string> models = {
@@ -109,16 +109,13 @@ class PinManager {
         bool setPwmFrequency(int, double);
 
         // i2c
-        void openI2c(int, uint32_t, int);
-        void closeI2c(int);
-        std::vector<uint8_t> readRegBufferI2c(int, uint32_t, int);
-        Result writeRegBufferI2c(int, uint32_t, std::vector<uint8_t>, int);
-
-        // uart
-        std::unique_ptr<Uart> getUart();
+        std::unique_ptr<I2c> getI2c();
 
         // spi
         std::unique_ptr<Spi> getSpi();
+
+        // uart
+        std::unique_ptr<Uart> getUart();
 };
 
 #endif /* PIN_MANAGER_H */
