@@ -24,7 +24,6 @@
 #include <cutils/properties.h>
 #include <hardware/odroidThings.h>
 #include <hardware/odroidthings-base.h>
-#include <map>
 #include <sstream>
 #include <unistd.h>
 #include <vector>
@@ -39,13 +38,13 @@ PinManager::PinManager(){
     name = boardName;
 
     if (!name.compare(0, strlen("odroidn2"), "odroidn2"))
-        board = new OdroidN2();
+        board = std::make_shared<OdroidN2>();
     else if (!name.compare(0, strlen("odroidc4"), "odroidc4"))
-        board = new OdroidC4();
+        board = std::make_shared<OdroidC4>();
     else if (!name.compare(0, strlen("odroidm1"), "odroidm1"))
-        board = new OdroidM1();
+        board = std::make_shared<OdroidM1>();
     else {
-        board = new Board(name);
+        board = std::make_shared<Board>(name);
         isUnknown= true;
         ALOGD("Board is not initialized");
         return;
@@ -109,18 +108,6 @@ std::vector<std::string> PinManager::getPinNameList() {
 std::vector<std::string> PinManager::getListOf(int mode) {
     std::vector<std::string> list;
     switch (mode) {
-        case PIN_GPIO: {
-            auto pinList = board->getPinList();
-
-            for (auto pin = pinList.begin(); pin != pinList.end(); pin++) {
-                if (pin->availableModes & PIN_GPIO) {
-                    int alt = getAlt(pin->pin);
-                    if (alt < 2)
-                        list.push_back(pin->name);
-                }
-            }
-            break;
-        }
         case PIN_PWM: {
             auto pinList = board->getPinList();
 
@@ -135,70 +122,6 @@ std::vector<std::string> PinManager::getListOf(int mode) {
         }
     }
     return list;
-}
-
-bool PinManager::getValue(int idx) {
-    return (digitalRead(board->getPin(idx)) == HIGH);
-}
-
-void PinManager::setDirection(int idx, direction_t direction) {
-    int pin = board->getPin(idx);
-    switch (direction) {
-        case DIRECTION_IN:
-            pinMode(pin, INPUT);
-            break;
-        case DIRECTION_OUT_INITIALLY_HIGH:
-            pinMode(pin, OUTPUT);
-            digitalWrite(pin, HIGH);
-            break;
-        case DIRECTION_OUT_INITIALLY_LOW:
-            pinMode(pin, OUTPUT);
-            digitalWrite(pin, LOW);
-            break;
-    }
-}
-
-void PinManager::setValue(int idx, bool value) {
-    digitalWrite(board->getPin(idx), value?HIGH:LOW);
-}
-
-void PinManager::setActiveType(int idx, int activeType) {
-    int pin = board->getPin(idx);
-    switch (activeType) {
-        case ACTIVE_LOW:
-            pullUpDnControl(pin, PUD_UP);
-            break;
-        case ACTIVE_HIGH:
-            pullUpDnControl(pin, PUD_DOWN);
-            break;
-    }
-}
-
-void PinManager::setEdgeTriggerType(int idx, int edgeTriggerType) {
-    int pin = board->getPin(idx);
-    switch (edgeTriggerType) {
-        case EDGE_NONE:
-            return;
-            break;
-        case EDGE_RISING:
-            triggerType[pin] = INT_EDGE_RISING;
-            break;
-        case EDGE_FALLING:
-            triggerType[pin] = INT_EDGE_FALLING;
-            break;
-        case EDGE_BOTH:
-            triggerType[pin] = INT_EDGE_BOTH;
-            break;
-    }
-}
-
-void PinManager::registerCallback(int idx, function_t callback) {
-    int pin = board->getPin(idx);
-    wiringPiISR(pin, triggerType[pin], callback);
-}
-
-void PinManager::unregisterCallback(int idx) {
-    wiringPiISRCancel(board->getPin(idx));
 }
 
 #define PWM_RANGE_MAX 65535
@@ -303,6 +226,11 @@ bool PinManager::setPwmFrequency(int idx, double frequency_hz) {
     }
 
     return true;
+}
+
+std::unique_ptr<Gpio> PinManager::getGpio() {
+    auto gpio = std::make_unique<Gpio>(board);
+    return gpio;
 }
 
 std::unique_ptr<I2c> PinManager::getI2c() {

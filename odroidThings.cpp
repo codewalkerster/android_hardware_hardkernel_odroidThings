@@ -31,6 +31,7 @@ using hardware::hardkernel::odroidthings::things_module_t;
 
 static android::Mutex thingsLock;
 static std::unique_ptr<PinManager> gPinManager;
+static std::unique_ptr<Gpio> gGpio;
 static std::unique_ptr<I2c> gI2c;
 static std::unique_ptr<Spi> gSpi;
 static std::unique_ptr<Uart> gUart;
@@ -42,6 +43,7 @@ static void things_init() {
         return;
     }
 
+    gGpio = gPinManager->getGpio();
     gI2c = gPinManager->getI2c();
     gSpi = gPinManager->getSpi();
     gUart = gPinManager->getUart();
@@ -57,6 +59,10 @@ static const std::vector<std::string> things_getPinNameList() {
 
 static const std::vector<std::string> things_getListOf(int mode) {
     switch (mode) {
+        case PIN_GPIO:
+            if (gGpio)
+                return gGpio->getList();
+            break;
         case PIN_I2C:
             if(gI2c)
                 return gI2c->getList();
@@ -74,31 +80,31 @@ static const std::vector<std::string> things_getListOf(int mode) {
 }
 
 static bool things_getValue(int pin) {
-    return gPinManager->getValue(pin);
+    return gGpio->getValue(pin);
 }
 
 static void things_setDirection(int pin, direction_t direction) {
-    return gPinManager->setDirection(pin, direction);
+    return gGpio->setDirection(pin, direction);
 }
 
 static void things_setValue(int pin, bool value) {
-    return gPinManager->setValue(pin, value);
+    return gGpio->setValue(pin, value);
 }
 
 static void things_setActiveType(int pin, int activeType) {
-    gPinManager->setActiveType(pin, activeType);
+    gGpio->setActiveType(pin, activeType);
 }
 
 static void things_setEdgeTriggerType(int pin, int edgeTriggerType) {
-    gPinManager->setEdgeTriggerType(pin, edgeTriggerType);
+    gGpio->setEdgeTriggerType(pin, edgeTriggerType);
 }
 
 static void things_registerCallback(int pin, function_t callback) {
-    gPinManager->registerCallback(pin, callback);
+    gGpio->registerCallback(pin, callback);
 }
 
 static void things_unregisterCallback(int pin) {
-    gPinManager->unregisterCallback(pin);
+    gGpio->unregisterCallback(pin);
 }
 
 static int things_close(struct hw_device_t *dev) {

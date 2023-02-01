@@ -27,6 +27,7 @@
 #include <string>
 
 #include "Board.h"
+#include "Gpio.h"
 #include "I2c.h"
 #include "Spi.h"
 #include "Uart.h"
@@ -34,7 +35,6 @@
 #define BOARD_PROPERTY "ro.product.device"
 
 using hardware::hardkernel::odroidthings::pin_t;
-using hardware::hardkernel::odroidthings::function_t;
 
 struct pwmState{
     unsigned int period;
@@ -50,8 +50,7 @@ struct pwmState{
 
 class PinManager {
     private:
-        Board *board;
-        int triggerType[PIN_MAX] = {INT_EDGE_SETUP,};
+        std::shared_ptr<Board> board;
         std::map<int, std::shared_ptr<pwmState>> pwm;
         bool isUnknown;
 
@@ -73,16 +72,6 @@ class PinManager {
         void writeSysfsTo(const std::string path, const std::string value);
         bool isUnknownBoard();
 
-        enum ActiveType {
-            ACTIVE_LOW,
-            ACTIVE_HIGH,
-        };
-        enum EdgeTrigger {
-            EDGE_NONE,
-            EDGE_RISING,
-            EDGE_FALLING,
-            EDGE_BOTH,
-        };
     public:
         PinManager();
         int init();
@@ -93,13 +82,7 @@ class PinManager {
         std::vector<std::string> getListOf(int);
 
         // gpio
-        bool getValue(int);
-        void setDirection(int, direction_t);
-        void setValue(int, bool);
-        void setActiveType(int, int);
-        void setEdgeTriggerType(int, int);
-        void registerCallback(int, function_t);
-        void unregisterCallback(int);
+        std::unique_ptr<Gpio> getGpio();
 
         // pwm
         void openPwm(int);
