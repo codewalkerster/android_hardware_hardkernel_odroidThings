@@ -25,25 +25,26 @@
 
 using hardware::hardkernel::odroidthings::i2c_t;
 
-struct i2cState {
+struct i2cContext{
     int fd;
     int busIdx;
     uint32_t deviceAddress;
     uint8_t regBufSize;
 };
 
-using i2cStatePtr = std::shared_ptr<i2cState>;
+using i2cCtxPtr = std::shared_ptr<i2cContext>;
 
 #define I2C_REG_TWO_BYTE 0x10000000
 
 class I2c {
     private:
         std::vector<i2c_t> i2cList;
-        std::map<int, i2cStatePtr> i2c;
+        std::map<int, i2cCtxPtr> i2c;
         I2c();
 
-        inline void getProperty(const i2cStatePtr&);
-        inline uint8_t getRegBufSize(const i2cStatePtr&, uint32_t);
+        inline i2cCtxPtr getCtx(int);
+        inline void getProperty(const i2cCtxPtr&);
+        inline uint8_t getRegBufSize(const i2cCtxPtr&, uint32_t);
         inline uint8_t *getRegBuffer(const uint8_t, uint32_t);
     public:
         I2c(std::vector<i2c_t> list);

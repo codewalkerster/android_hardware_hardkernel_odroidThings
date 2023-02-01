@@ -32,24 +32,28 @@ I2c::I2c(std::vector<i2c_t> list) {
     i2cList = list;
 }
 
-inline void I2c::getProperty(const i2cStatePtr& state) {
+inline i2cCtxPtr I2c::getCtx(int idx) {
+    return i2c.find(idx)->second;
+}
+
+inline void I2c::getProperty(const i2cCtxPtr& ctx) {
     std::ostringstream propertyName;
     propertyName << "persist.android.things.i2c.reg.size."
-        << state->busIdx << "." << state->deviceAddress;
+        << ctx->busIdx << "." << ctx->deviceAddress;
 
     char buffer[92];
     property_get(propertyName.str().c_str() , buffer, "0");
 
-    state->regBufSize = atoi(buffer);
+    ctx->regBufSize = atoi(buffer);
 }
 
-inline uint8_t I2c::getRegBufSize(const i2cStatePtr& state, uint32_t regAddress) {
+inline uint8_t I2c::getRegBufSize(const i2cCtxPtr& ctx, uint32_t regAddress) {
     uint8_t regBufSize = 1;
-    if (state->regBufSize == 0) {
+    if (ctx->regBufSize == 0) {
         if (regAddress & I2C_REG_TWO_BYTE)
             regBufSize = 2;
     } else {
-        regBufSize = state->regBufSize;
+        regBufSize = ctx->regBufSize;
     }
 
     return regBufSize;
@@ -80,31 +84,31 @@ void I2c::open(const int busIdx, const uint32_t address, const int idx) {
         return;
     }
 
-    const auto state = std::make_shared<i2cState>();
+    const auto ctx = std::make_shared<i2cContext>();
 
-    state->fd = fd;
-    state->busIdx = busIdx;
-    state->deviceAddress = address;
+    ctx->fd = fd;
+    ctx->busIdx = busIdx;
+    ctx->deviceAddress = address;
 
-    getProperty(state);
+    getProperty(ctx);
 
-    i2c.insert(std::make_pair(idx, state));
+    i2c.insert(std::make_pair(idx, ctx));
 }
 
 void I2c::close(const int idx) {
-    const auto state = i2c.find(idx)->second;
-    ::close(state->fd);
+    const auto ctx = getCtx(idx);
+    ::close(ctx->fd);
     i2c.erase(idx);
 }
 
 const std::vector<uint8_t> I2c::read(const int idx, const int length) {
-    const auto state = i2c.find(idx)->second;
+    const auto ctx = getCtx(idx);
 
     struct i2c_msg msg;
     struct i2c_rdwr_ioctl_data data;
     uint8_t *buffer = new uint8_t[length];
 
-    msg.addr = (uint16_t) state->deviceAddress;
+    msg.addr = (uint16_t) ctx->deviceAddress;
     msg.flags = I2C_M_RD;
     msg.len = length;
     msg.buf = buffer;
@@ -112,7 +116,7 @@ const std::vector<uint8_t> I2c::read(const int idx, const int length) {
     data.msgs = &msg;
     data.nmsgs = 1;
 
-    ioctl(state->fd, I2C_RDWR, &data);
+    ioctl(ctx->fd, I2C_RDWR, &data);
 
     std::vector<uint8_t> result(buffer, buffer+length);
     delete[] buffer;
@@ -122,21 +126,21 @@ const std::vector<uint8_t> I2c::read(const int idx, const int length) {
 
 const std::vector<uint8_t> I2c::readRegBuffer(const int idx,
         const uint32_t regAddress, const int length) {
-    const auto state = i2c.find(idx)->second;
+    const auto ctx = getCtx(idx);
 
     struct i2c_msg msg[2];
     struct i2c_rdwr_ioctl_data data;
     uint8_t *buffer = new uint8_t[length];
 
-    int regSize = getRegBufSize(state, regAddress);
+    int regSize = getRegBufSize(ctx, regAddress);
     uint8_t *regBuf = getRegBuffer(regSize, regAddress);
 
-    msg[0].addr = (uint16_t) state->deviceAddress;
+    msg[0].addr = (uint16_t) ctx->deviceAddress;
     msg[0].flags = 0;
     msg[0].len = regSize;
     msg[0].buf = regBuf;
 
-    msg[1].addr = (uint16_t) state->deviceAddress;
+    msg[1].addr = (uint16_t) ctx->deviceAddress;
     msg[1].flags = I2C_M_RD;
     msg[1].len = length;
     msg[1].buf = buffer;
@@ -144,7 +148,7 @@ const std::vector<uint8_t> I2c::readRegBuffer(const int idx,
     data.msgs = msg;
     data.nmsgs = 2;
 
-    ioctl(state->fd, I2C_RDWR, &data);
+    ioctl(ctx->fd, I2C_RDWR, &data);
 
     std::vector<uint8_t> result(buffer, buffer+length);
     delete[] buffer;
@@ -154,21 +158,21 @@ const std::vector<uint8_t> I2c::readRegBuffer(const int idx,
 }
 
 uint16_t I2c::readRegWord(const int idx, const uint32_t regAddress) {
-    const auto state = i2c.find(idx)->second;
+    const auto ctx = getCtx(idx);
 
     struct i2c_msg msg[2];
     struct i2c_rdwr_ioctl_data data;
     uint8_t buffer[2];
 
-    int regSize = getRegBufSize(state, regAddress);
+    int regSize = getRegBufSize(ctx, regAddress);
     uint8_t *regBuf = getRegBuffer(regSize, regAddress);
 
-    msg[0].addr = (uint16_t) state->deviceAddress;
+    msg[0].addr = (uint16_t) ctx->deviceAddress;
     msg[0].flags = 0;
     msg[0].len = regSize;
     msg[0].buf = regBuf;
 
-    msg[1].addr = (uint16_t) state->deviceAddress;
+    msg[1].addr = (uint16_t) ctx->deviceAddress;
     msg[1].flags = I2C_M_RD;
     msg[1].len = 2;
     msg[1].buf = buffer;
@@ -176,7 +180,7 @@ uint16_t I2c::readRegWord(const int idx, const uint32_t regAddress) {
     data.msgs = msg;
     data.nmsgs = 2;
 
-    ioctl(state->fd, I2C_RDWR, &data);
+    ioctl(ctx->fd, I2C_RDWR, &data);
 
     delete[] regBuf;
 
@@ -184,21 +188,21 @@ uint16_t I2c::readRegWord(const int idx, const uint32_t regAddress) {
 }
 
 uint8_t I2c::readRegByte(const int idx, const uint32_t regAddress) {
-    const auto state = i2c.find(idx)->second;
+    const auto ctx = getCtx(idx);
 
     struct i2c_msg msg[2];
     struct i2c_rdwr_ioctl_data data;
     uint8_t buffer;
 
-    int regSize = getRegBufSize(state, regAddress);
+    int regSize = getRegBufSize(ctx, regAddress);
     uint8_t *regBuf = getRegBuffer(regSize, regAddress);
 
-    msg[0].addr = (uint16_t) state->deviceAddress;
+    msg[0].addr = (uint16_t) ctx->deviceAddress;
     msg[0].flags = 0;
     msg[0].len = regSize;
     msg[0].buf = regBuf;
 
-    msg[1].addr = (uint16_t) state->deviceAddress;
+    msg[1].addr = (uint16_t) ctx->deviceAddress;
     msg[1].flags = I2C_M_RD;
     msg[1].len = 1;
     msg[1].buf = &buffer;
@@ -206,7 +210,7 @@ uint8_t I2c::readRegByte(const int idx, const uint32_t regAddress) {
     data.msgs = msg;
     data.nmsgs = 2;
 
-    ioctl(state->fd, I2C_RDWR, &data);
+    ioctl(ctx->fd, I2C_RDWR, &data);
 
     delete[] regBuf;
 
@@ -215,7 +219,7 @@ uint8_t I2c::readRegByte(const int idx, const uint32_t regAddress) {
 
 Result I2c::write(const int idx, std::vector<uint8_t> transferData,
         const int length) {
-    const auto state = i2c.find(idx)->second;
+    const auto ctx = getCtx(idx);
 
     struct i2c_msg msg;
     struct i2c_rdwr_ioctl_data data;
@@ -223,7 +227,7 @@ Result I2c::write(const int idx, std::vector<uint8_t> transferData,
 
     std::copy(transferData.begin(), transferData.end(), buffer);
 
-    msg.addr = (uint16_t) state->deviceAddress;
+    msg.addr = (uint16_t) ctx->deviceAddress;
     msg.flags = 0;
     msg.len = length;
     msg.buf = buffer;
@@ -231,7 +235,7 @@ Result I2c::write(const int idx, std::vector<uint8_t> transferData,
     data.msgs = &msg;
     data.nmsgs = 1;
 
-    ioctl(state->fd, I2C_RDWR, &data);
+    ioctl(ctx->fd, I2C_RDWR, &data);
     delete[] buffer;
 
     return Result::OK;
@@ -239,12 +243,12 @@ Result I2c::write(const int idx, std::vector<uint8_t> transferData,
 
 Result I2c::writeRegBuffer(const int idx, const uint32_t regAddress,
         std::vector<uint8_t> transferData, const int length) {
-    const auto state = i2c.find(idx)->second;
+    const auto ctx = getCtx(idx);
 
     struct i2c_msg msg;
     struct i2c_rdwr_ioctl_data data;
 
-    int regSize = getRegBufSize(state, regAddress);
+    int regSize = getRegBufSize(ctx, regAddress);
     uint8_t *regBuf = getRegBuffer(regSize, regAddress);
 
     uint8_t *buffer = new uint8_t[length + regSize];
@@ -254,7 +258,7 @@ Result I2c::writeRegBuffer(const int idx, const uint32_t regAddress,
 
     std::copy(transferData.begin(), transferData.end(), buffer+regSize);
 
-    msg.addr = (uint16_t) state->deviceAddress;
+    msg.addr = (uint16_t) ctx->deviceAddress;
     msg.flags = 0;
     msg.len = length + regSize;
     msg.buf = buffer;
@@ -262,7 +266,7 @@ Result I2c::writeRegBuffer(const int idx, const uint32_t regAddress,
     data.msgs = &msg;
     data.nmsgs = 1;
 
-    ioctl(state->fd, I2C_RDWR, &data);
+    ioctl(ctx->fd, I2C_RDWR, &data);
     delete[] buffer;
 
     return Result::OK;
@@ -270,12 +274,12 @@ Result I2c::writeRegBuffer(const int idx, const uint32_t regAddress,
 
 Result I2c::writeRegWord(const int idx, const uint32_t regAddress,
         uint16_t transferData) {
-    const auto state = i2c.find(idx)->second;
+    const auto ctx = getCtx(idx);
 
     struct i2c_msg msg;
     struct i2c_rdwr_ioctl_data data;
 
-    int regSize = getRegBufSize(state, regAddress);
+    int regSize = getRegBufSize(ctx, regAddress);
     uint8_t *regBuf = getRegBuffer(regSize, regAddress);
 
     uint8_t *buffer = new uint8_t[sizeof(uint16_t) + regSize];
@@ -289,7 +293,7 @@ Result I2c::writeRegWord(const int idx, const uint32_t regAddress,
     i++;
     buffer[i] = (uint8_t)(transferData & 0xFF);
 
-    msg.addr = (uint16_t) state->deviceAddress;
+    msg.addr = (uint16_t) ctx->deviceAddress;
     msg.flags = 0;
     msg.len = sizeof(uint16_t) + regSize;
     msg.buf = buffer;
@@ -297,7 +301,7 @@ Result I2c::writeRegWord(const int idx, const uint32_t regAddress,
     data.msgs = &msg;
     data.nmsgs = 1;
 
-    ioctl(state->fd, I2C_RDWR, &data);
+    ioctl(ctx->fd, I2C_RDWR, &data);
     delete[] buffer;
 
     return Result::OK;
@@ -305,12 +309,12 @@ Result I2c::writeRegWord(const int idx, const uint32_t regAddress,
 
 Result I2c::writeRegByte(const int idx, const uint32_t regAddress,
         uint8_t transferData) {
-    const auto state = i2c.find(idx)->second;
+    const auto ctx = getCtx(idx);
 
     struct i2c_msg msg;
     struct i2c_rdwr_ioctl_data data;
 
-    int regSize = getRegBufSize(state, regAddress);
+    int regSize = getRegBufSize(ctx, regAddress);
     uint8_t *regBuf = getRegBuffer(regSize, regAddress);
 
     uint8_t *buffer = new uint8_t[sizeof(uint8_t) + regSize];
@@ -320,7 +324,7 @@ Result I2c::writeRegByte(const int idx, const uint32_t regAddress,
         buffer[i] = regBuf[i];
     buffer[i] = transferData;
 
-    msg.addr = (uint16_t) state->deviceAddress;
+    msg.addr = (uint16_t) ctx->deviceAddress;
     msg.flags = 0;
     msg.len = sizeof(uint8_t) + regSize;
     msg.buf = buffer;
@@ -328,7 +332,7 @@ Result I2c::writeRegByte(const int idx, const uint32_t regAddress,
     data.msgs = &msg;
     data.nmsgs = 1;
 
-    ioctl(state->fd, I2C_RDWR, &data);
+    ioctl(ctx->fd, I2C_RDWR, &data);
     delete[] buffer;
 
     return Result::OK;

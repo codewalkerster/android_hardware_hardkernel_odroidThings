@@ -25,11 +25,12 @@
 #include <vector>
 
 using hardware::hardkernel::odroidthings::function_t;
+using boardPtr = std::shared_ptr<Board>;
 
 class Gpio {
     private:
         int triggerType[PIN_MAX] = {INT_EDGE_SETUP,};
-        std::shared_ptr<Board> board;
+        boardPtr board;
 
         enum ActiveType {
             ACTIVE_LOW,
@@ -43,7 +44,7 @@ class Gpio {
         };
 
     public:
-        Gpio(std::shared_ptr<Board>);
+        Gpio(boardPtr);
         std::vector<std::string> getList();
         bool getValue(int);
         void setDirection(int, direction_t);

@@ -18,7 +18,7 @@
 
 #include "Gpio.h"
 
-Gpio::Gpio(std::shared_ptr<Board>  board): board(board) {
+Gpio::Gpio(boardPtr board): board(board) {
 }
 
 std::vector<std::string> Gpio::getList() {

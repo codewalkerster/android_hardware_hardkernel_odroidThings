@@ -33,7 +33,7 @@ using hardware::hardkernel::odroidthings::function_t;
 #define UART_CALLBACK_SIZE_PROPERTY "persist.android.things.uart.callback.size"
 #define DEFAULT_BUFFER_SIZE "256"
 
-struct uartState {
+struct uartContext {
     int fd;
     struct termios option;
     struct termios backup_option;
@@ -51,11 +51,14 @@ struct uartState {
     size_t callbackBufferSize;
 };
 
+using uartCtxPtr = std::shared_ptr<uartContext>;
+
 class Uart {
     private:
         std::vector<uart_t> uartList;
-        std::map<int, std::shared_ptr<uartState>> uart;
+        std::map<int, uartCtxPtr> uart;
         Uart();
+        inline uartCtxPtr getCtx(int);
         uint32_t getBaudrate(const int baudrate);
 
         void callbackRun(const int index);

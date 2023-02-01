@@ -26,7 +26,7 @@
 
 using hardware::hardkernel::odroidthings::spi_t;
 
-struct spiState {
+struct spiContext {
     int fd;
 
     uint8_t mode;
@@ -36,12 +36,15 @@ struct spiState {
     uint16_t delay;
 };
 
+using spiCtxPtr = std::shared_ptr<spiContext>;
+
 class Spi {
     private:
         std::vector<spi_t> spiList;
-        std::map<int, std::shared_ptr<spiState>> spi;
+        std::map<int, spiCtxPtr> spi;
         Spi();
         int applyMode(const int index);
+        inline spiCtxPtr getCtx(int);
 
     public:
         Spi(std::vector<spi_t> list);

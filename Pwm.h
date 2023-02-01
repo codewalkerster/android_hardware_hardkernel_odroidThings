@@ -22,7 +22,9 @@
 #include "Board.h"
 #include <map>
 
-struct pwmState{
+#define HERTZTONANOSECOND 1000000000
+
+struct pwmContext {
     unsigned int period;
     double cycle_rate;
 
@@ -34,17 +36,20 @@ struct pwmState{
     std::string unexportPath;
 };
 
-#define HERTZTONANOSECOND 1000000000
+using boardPtr = std::shared_ptr<Board>;
+using pwmCtxPtr = std::shared_ptr<pwmContext>;
 
 class Pwm {
     private:
-        std::shared_ptr<Board> board;
-        std::map<int, std::shared_ptr<pwmState>> pwm;
+        boardPtr board;
+        std::map<int, pwmCtxPtr> pwm;
 
-        void initState(int, uint8_t, uint8_t);
-        void writeSysfsTo(const std::string, const std::string);
+        void initContext(int, uint8_t, uint8_t);
+        inline void writeSysfsTo(const std::string, const std::string);
+        inline pwmCtxPtr getCtx(int);
+
     public:
-        Pwm(std::shared_ptr<Board>);
+        Pwm(boardPtr);
         std::vector<std::string> getList();
         void open(int);
         void close(int);
