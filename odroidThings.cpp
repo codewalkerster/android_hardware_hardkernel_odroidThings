@@ -32,6 +32,7 @@ using hardware::hardkernel::odroidthings::things_module_t;
 static android::Mutex thingsLock;
 static std::unique_ptr<PinManager> gPinManager;
 static std::unique_ptr<Gpio> gGpio;
+static std::unique_ptr<Pwm> gPwm;
 static std::unique_ptr<I2c> gI2c;
 static std::unique_ptr<Spi> gSpi;
 static std::unique_ptr<Uart> gUart;
@@ -44,6 +45,7 @@ static void things_init() {
     }
 
     gGpio = gPinManager->getGpio();
+    gPwm = gPinManager->getPwm();
     gI2c = gPinManager->getI2c();
     gSpi = gPinManager->getSpi();
     gUart = gPinManager->getUart();
@@ -63,6 +65,10 @@ static const std::vector<std::string> things_getListOf(int mode) {
             if (gGpio)
                 return gGpio->getList();
             break;
+        case PIN_PWM:
+            if (gPwm)
+                return gPwm->getList();
+            break;
         case PIN_I2C:
             if(gI2c)
                 return gI2c->getList();
@@ -76,7 +82,7 @@ static const std::vector<std::string> things_getListOf(int mode) {
                 return gUart->getList();
             break;
     }
-    return gPinManager->getListOf(mode);
+    return std::vector<std::string>();
 }
 
 static bool things_getValue(int pin) {
@@ -119,23 +125,23 @@ static int things_close(struct hw_device_t *dev) {
 }
 
 static void things_pwm_open(int pin) {
-    gPinManager->openPwm(pin);
+    gPwm->open(pin);
 }
 
 static void things_pwm_close(int pin) {
-    gPinManager->closePwm(pin);
+    gPwm->close(pin);
 }
 
 static bool things_pwm_setEnable(int pin, bool enabled) {
-    return gPinManager->setPwmEnable(pin, enabled);
+    return gPwm->setEnable(pin, enabled);
 }
 
 static bool things_pwm_setDutyCycle(int pin, double cycle_rate) {
-    return gPinManager->setPwmDutyCycle(pin, cycle_rate);
+    return gPwm->setDutyCycle(pin, cycle_rate);
 }
 
 static bool things_pwm_setFrequency(int pin, double frequency_hz) {
-    return gPinManager->setPwmFrequency(pin, frequency_hz);
+    return gPwm->setFrequency(pin, frequency_hz);
 }
 
 static void things_i2c_open(int nameIdx, uint32_t address, int idx) {

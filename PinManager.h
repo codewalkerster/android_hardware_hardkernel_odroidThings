@@ -22,12 +22,11 @@
 #include <hardware/odroidThings.h>
 #include <wiringPi/wiringPi.h>
 #include <vector>
-#include <map>
-#include <fstream>
 #include <string>
 
 #include "Board.h"
 #include "Gpio.h"
+#include "Pwm.h"
 #include "I2c.h"
 #include "Spi.h"
 #include "Uart.h"
@@ -35,23 +34,9 @@
 #define BOARD_PROPERTY "ro.product.device"
 
 using hardware::hardkernel::odroidthings::pin_t;
-
-struct pwmState{
-    unsigned int period;
-    double cycle_rate;
-
-    uint8_t chip;
-    uint8_t node;
-    std::string periodPath;
-    std::string dutyCyclePath;
-    std::string enablePath;
-    std::string unexportPath;
-};
-
 class PinManager {
     private:
         std::shared_ptr<Board> board;
-        std::map<int, std::shared_ptr<pwmState>> pwm;
         bool isUnknown;
 
         std::vector<std::string> models = {
@@ -65,12 +50,8 @@ class PinManager {
             "M1",
         };
 
-        int initPwm();
-
         // helper function
-        void initPwmState(int idx, uint8_t chip, uint8_t node);
-        void writeSysfsTo(const std::string path, const std::string value);
-        bool isUnknownBoard();
+       bool isUnknownBoard();
 
     public:
         PinManager();
@@ -79,25 +60,11 @@ class PinManager {
 
         // common
         std::vector<std::string> getPinNameList();
-        std::vector<std::string> getListOf(int);
 
-        // gpio
         std::unique_ptr<Gpio> getGpio();
-
-        // pwm
-        void openPwm(int);
-        void closePwm(int);
-        bool setPwmEnable(int, bool);
-        bool setPwmDutyCycle(int, double);
-        bool setPwmFrequency(int, double);
-
-        // i2c
+        std::unique_ptr<Pwm> getPwm();
         std::unique_ptr<I2c> getI2c();
-
-        // spi
         std::unique_ptr<Spi> getSpi();
-
-        // uart
         std::unique_ptr<Uart> getUart();
 };
 
