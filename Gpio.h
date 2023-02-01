@@ -22,14 +22,23 @@
 #include "Board.h"
 #include <hardware/odroidThings.h>
 #include <wiringPi/wiringPi.h>
+#include <map>
 #include <vector>
 
 using hardware::hardkernel::odroidthings::function_t;
 using boardPtr = std::shared_ptr<Board>;
 
+struct gpioContext {
+    int pin;
+    int triggerType = INT_EDGE_SETUP;
+    gpioContext(int pin): pin(pin){};
+};
+
+using gpioCtxPtr = std::shared_ptr<gpioContext>;
+
 class Gpio {
     private:
-        int triggerType[PIN_MAX] = {INT_EDGE_SETUP,};
+        std::map<int, gpioCtxPtr> gpio;
         boardPtr board;
 
         enum ActiveType {
@@ -43,9 +52,13 @@ class Gpio {
             EDGE_BOTH,
         };
 
+        inline gpioCtxPtr getCtx(int);
+
     public:
         Gpio(boardPtr);
         std::vector<std::string> getList();
+        void open(int);
+        void close(int);
         bool getValue(int);
         void setDirection(int, direction_t);
         void setValue(int, bool);

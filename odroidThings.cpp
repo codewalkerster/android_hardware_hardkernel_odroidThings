@@ -85,6 +85,14 @@ static const std::vector<std::string> things_getListOf(int mode) {
     return std::vector<std::string>();
 }
 
+static void things_gpio_open(int pin) {
+    gGpio->open(pin);
+}
+
+static void things_gpio_close(int pin) {
+    gGpio->close(pin);
+}
+
 static bool things_getValue(int pin) {
     return gGpio->getValue(pin);
 }
@@ -367,6 +375,8 @@ static int things_open(const hw_module_t *module, const char __unused *id,
     dev->common_ops.getPinNameList = things_getPinNameList;
     dev->common_ops.getListOf = things_getListOf;
 
+    dev->gpio_ops.open = things_gpio_open;
+    dev->gpio_ops.close = things_gpio_close;
     dev->gpio_ops.getValue = things_getValue;
     dev->gpio_ops.setDirection = things_setDirection;
     dev->gpio_ops.setValue = things_setValue;

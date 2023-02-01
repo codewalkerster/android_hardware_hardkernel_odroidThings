@@ -36,12 +36,28 @@ std::vector<std::string> Gpio::getList() {
     return list;
 }
 
+inline gpioCtxPtr Gpio::getCtx(int idx) {
+    return gpio.find(idx)->second;
+}
+
+void Gpio::open(int idx) {
+    const auto ctx = std::make_shared<gpioContext>(idx);
+
+    ctx->pin = board->getPin(idx);
+
+    gpio.insert(std::make_pair(idx, ctx));
+}
+
+void Gpio::close(int idx) {
+    gpio.erase(idx);
+}
+
 bool Gpio::getValue(int idx) {
-    return (digitalRead(board->getPin(idx)) == HIGH);
+    return (digitalRead(getCtx(idx)->pin) == HIGH);
 }
 
 void Gpio::setDirection(int idx, direction_t direction) {
-    int pin = board->getPin(idx);
+    int pin = getCtx(idx)->pin;
     switch (direction) {
         case DIRECTION_IN:
             pinMode(pin, INPUT);
@@ -58,11 +74,11 @@ void Gpio::setDirection(int idx, direction_t direction) {
 }
 
 void Gpio::setValue(int idx, bool value) {
-    digitalWrite(board->getPin(idx), value?HIGH:LOW);
+    digitalWrite(getCtx(idx)->pin, value?HIGH:LOW);
 }
 
 void Gpio::setActiveType(int idx, int activeType) {
-    int pin = board->getPin(idx);
+    int pin = getCtx(idx)->pin;
     switch (activeType) {
         case ACTIVE_LOW:
             pullUpDnControl(pin, PUD_UP);
@@ -75,28 +91,29 @@ void Gpio::setActiveType(int idx, int activeType) {
 }
 
 void Gpio::setEdgeTriggerType(int idx, int edgeTriggerType) {
-    int pin = board->getPin(idx);
+    auto ctx = getCtx(idx);
     switch (edgeTriggerType) {
         case EDGE_NONE:
             return;
             break;
         case EDGE_RISING:
-            triggerType[pin] = INT_EDGE_RISING;
+            ctx->triggerType = INT_EDGE_RISING;
             break;
         case EDGE_FALLING:
-            triggerType[pin] = INT_EDGE_FALLING;
+            ctx->triggerType = INT_EDGE_FALLING;
             break;
         case EDGE_BOTH:
-            triggerType[pin] = INT_EDGE_BOTH;
+            ctx->triggerType = INT_EDGE_BOTH;
             break;
     }
 }
 
 void Gpio::registerCallback(int idx, function_t callback) {
-    int pin = board->getPin(idx);
-    wiringPiISR(pin, triggerType[pin], callback);
+    auto ctx = getCtx(idx);
+    wiringPiISR(ctx->pin, ctx->triggerType, callback);
 }
 
 void Gpio::unregisterCallback(int idx) {
-    wiringPiISRCancel(board->getPin(idx));
+    auto ctx = getCtx(idx);
+    wiringPiISRCancel(ctx->pin);
 }
