@@ -32,6 +32,7 @@ cc_library_shared {
         "odroidThings.cpp",
         "PinManager.cpp",
         "Gpio.cpp",
+        "GpioCallback.cpp",
         "Pwm.cpp",
         "I2c.cpp",
         "Spi.cpp",

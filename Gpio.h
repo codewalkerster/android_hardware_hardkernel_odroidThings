@@ -20,21 +20,22 @@
 #define GPIO_H_
 
 #include "Board.h"
+#include "GpioCallback.h"
 #include <hardware/odroidThings.h>
-#include <wiringPi/wiringPi.h>
 #include <map>
 #include <vector>
 
-using hardware::hardkernel::odroidthings::function_t;
-using boardPtr = std::shared_ptr<Board>;
+using cbPtr = std::shared_ptr<GpioCallback>;
 
 struct gpioContext {
     int pin;
-    int triggerType = INT_EDGE_SETUP;
-    gpioContext(int pin): pin(pin){};
+    cbPtr cb;
+    gpioContext(int pin): pin(pin), cb(nullptr) {};
 };
 
+using boardPtr = std::shared_ptr<Board>;
 using gpioCtxPtr = std::shared_ptr<gpioContext>;
+using hardware::hardkernel::odroidthings::function_t;
 
 class Gpio {
     private:
@@ -45,17 +46,11 @@ class Gpio {
             ACTIVE_LOW,
             ACTIVE_HIGH,
         };
-        enum EdgeTrigger {
-            EDGE_NONE,
-            EDGE_RISING,
-            EDGE_FALLING,
-            EDGE_BOTH,
-        };
-
         inline gpioCtxPtr getCtx(int);
+        inline cbPtr getCb(int);
 
     public:
-        Gpio(boardPtr);
+        Gpio(boardPtr board): board(board) {};
         std::vector<std::string> getList();
         void open(int);
         void close(int);

@@ -17,9 +17,7 @@
  */
 
 #include "Gpio.h"
-
-Gpio::Gpio(boardPtr board): board(board) {
-}
+#include <wiringPi/wiringPi.h>
 
 std::vector<std::string> Gpio::getList() {
     std::vector<std::string> list;
@@ -40,15 +38,22 @@ inline gpioCtxPtr Gpio::getCtx(int idx) {
     return gpio.find(idx)->second;
 }
 
+inline cbPtr Gpio::getCb(int idx) {
+    auto ctx = getCtx(idx);
+    if (ctx->cb == nullptr)
+        ctx->cb = std::make_shared<GpioCallback>(wpiPinToGpio(ctx->pin));
+    return ctx->cb;
+}
+
 void Gpio::open(int idx) {
     const auto ctx = std::make_shared<gpioContext>(idx);
 
     ctx->pin = board->getPin(idx);
-
     gpio.insert(std::make_pair(idx, ctx));
 }
 
 void Gpio::close(int idx) {
+    const auto ctx = getCtx(idx);
     gpio.erase(idx);
 }
 
@@ -87,33 +92,19 @@ void Gpio::setActiveType(int idx, int activeType) {
             pullUpDnControl(pin, PUD_DOWN);
             break;
     }
-
 }
 
 void Gpio::setEdgeTriggerType(int idx, int edgeTriggerType) {
-    auto ctx = getCtx(idx);
-    switch (edgeTriggerType) {
-        case EDGE_NONE:
-            return;
-            break;
-        case EDGE_RISING:
-            ctx->triggerType = INT_EDGE_RISING;
-            break;
-        case EDGE_FALLING:
-            ctx->triggerType = INT_EDGE_FALLING;
-            break;
-        case EDGE_BOTH:
-            ctx->triggerType = INT_EDGE_BOTH;
-            break;
-    }
+    auto cb = getCb(idx);
+    cb->setTriggerType(edgeTriggerType);
 }
 
 void Gpio::registerCallback(int idx, function_t callback) {
-    auto ctx = getCtx(idx);
-    wiringPiISR(ctx->pin, ctx->triggerType, callback);
+    auto cb = getCb(idx);
+    cb->registerCb(callback);
 }
 
 void Gpio::unregisterCallback(int idx) {
-    auto ctx = getCtx(idx);
-    wiringPiISRCancel(ctx->pin);
+    auto cb = getCb(idx);
+    cb->unregisterCb();
 }
