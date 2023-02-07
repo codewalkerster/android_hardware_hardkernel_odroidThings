@@ -1,7 +1,28 @@
+/*
+ *    Copyright (c) 2023 Sangchul Go <luke.go@hardkernel.com>
+ *
+ *    OdroidThings is free software: you can redistribute it and/or modify
+ *    it under the terms of the GNU Lesser General Public License as
+ *    published by the Free Software Foundation, either version 3 of the
+ *    License, or (at your option) any later version.
+ *
+ *    OdroidThings is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *    GNU Lesser General Public License for more details.
+ *
+ *    You should have received a copy of the GNU Lesser General Public
+ *    License along with OdroidThings.
+ *    If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "Pwm.h"
+#include "Helper.h"
 #include <cutils/log.h>
 #include <fstream>
 #include <sstream>
+
+using Helper::writeSysfsTo;
 
 Pwm::Pwm(boardPtr board): board(board) {
     auto list = board->getPwmList();
@@ -29,12 +50,6 @@ void Pwm::initContext(int idx, uint8_t chip, uint8_t node) {
 
         pwm.insert(std::make_pair(idx, ctx));
     }
-}
-
-inline void Pwm::writeSysfsTo(const std::string path, const std::string value) {
-    std::ofstream file(path);
-    file << value;
-    file.close();
 }
 
 inline pwmCtxPtr Pwm::getCtx(int idx) {

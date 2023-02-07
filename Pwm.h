@@ -45,7 +45,6 @@ class Pwm {
         std::map<int, pwmCtxPtr> pwm;
 
         void initContext(int, uint8_t, uint8_t);
-        inline void writeSysfsTo(const std::string, const std::string);
         inline pwmCtxPtr getCtx(int);
 
     public:
