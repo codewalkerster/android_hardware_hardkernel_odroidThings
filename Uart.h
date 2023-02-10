@@ -1,5 +1,5 @@
 /*
- *    Copyright (c) 2020 Sangchul Go <luke.go@hardkernel.com>
+ *    Copyright (c) 2020 - 2023 Sangchul Go <luke.go@hardkernel.com>
  *
  *    OdroidThings is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU Lesser General Public License as
@@ -19,36 +19,29 @@
 #ifndef UART_H_
 #define UART_H_
 
+#include "UartCallback.h"
 #include <hardware/odroidThings.h>
 #include <map>
-#include <pthread.h>
 #include <termios.h>
 #include <unistd.h>
 #include <vector>
-#include "ringbuffer.h"
 
 using hardware::hardkernel::odroidthings::uart_t;
 using hardware::hardkernel::odroidthings::function_t;
 
-#define UART_CALLBACK_SIZE_PROPERTY "persist.android.things.uart.callback.size"
-#define DEFAULT_BUFFER_SIZE "256"
+using cbptr = std::shared_ptr<UartCallback>;
 
 struct uartContext {
     int fd;
     struct termios option;
     struct termios backup_option;
-    struct termios backup_callback_option;
 
     uint8_t hwFlowControl;
     uint8_t parity;
     uint8_t controlLine;
 
-    pthread_t callbackThread;
-    pthread_mutex_t mutex;
-    function_t callback;
-
-    ring_buffer_t *readBuffer;
-    size_t callbackBufferSize;
+    cbptr cb;
+    void init(int);
 };
 
 using uartCtxPtr = std::shared_ptr<uartContext>;
@@ -59,10 +52,8 @@ class Uart {
         std::map<int, uartCtxPtr> uart;
         Uart();
         inline uartCtxPtr getCtx(int);
+        inline cbptr getCb(int);
         uint32_t getBaudrate(const int baudrate);
-
-        void callbackRun(const int index);
-
     public:
         Uart(std::vector<uart_t> list);
         std::vector<std::string> getList();

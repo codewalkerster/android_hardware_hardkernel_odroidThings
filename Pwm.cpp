@@ -54,7 +54,7 @@ void Pwm::initContext(int idx, uint8_t chip, uint8_t node) {
 
 inline pwmCtxPtr Pwm::getCtx(int idx) {
     auto pin = board->getPin(idx);
-    return pwm.find(pin)->second;
+    return pwm[pin];
 }
 
 std::vector<std::string> Pwm::getList() {

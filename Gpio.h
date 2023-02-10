@@ -48,6 +48,7 @@ class Gpio {
         };
         inline gpioCtxPtr getCtx(int);
         inline cbPtr getCb(int);
+        inline int getPin(int);
 
     public:
         Gpio(boardPtr board): board(board) {};

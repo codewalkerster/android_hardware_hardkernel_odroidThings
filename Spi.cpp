@@ -31,7 +31,7 @@ Spi::Spi(std::vector<spi_t> list) {
 }
 
 inline spiCtxPtr Spi::getCtx(int idx) {
-    return spi.find(idx)->second;
+    return spi[idx];
 }
 
 std::vector<std::string> Spi::getList() {

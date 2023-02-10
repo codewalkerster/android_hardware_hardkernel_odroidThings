@@ -159,7 +159,7 @@ void GpioCallback::setPriority() {
 }
 
 void GpioCallback::loop() {
-    int timeout = 10;
+    int timeout = 1000;
 
     setPriority();
 

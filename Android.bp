@@ -37,6 +37,7 @@ cc_library_shared {
         "I2c.cpp",
         "Spi.cpp",
         "Uart.cpp",
+        "UartCallback.cpp",
     ],
 
     include_dirs: [

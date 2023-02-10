@@ -1,5 +1,5 @@
 /*
- *    Copyright (c) 2020 Sangchul Go <luke.go@hardkernel.com>
+ *    Copyright (c) 2020 - 2023 Sangchul Go <luke.go@hardkernel.com>
  *
  *    OdroidThings is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU Lesser General Public License as
@@ -19,10 +19,7 @@
 #include "Uart.h"
 #include <cerrno>
 #include <cutils/log.h>
-#include <cutils/properties.h>
-#include <thread>
 #include <fcntl.h>
-#include <sys/epoll.h>
 #include <stdlib.h>
 
 Uart::Uart() {
@@ -40,7 +37,14 @@ std::vector<std::string> Uart::getList() {
 }
 
 inline uartCtxPtr Uart::getCtx(int idx) {
-    return uart.find(idx)->second;
+    return uart[idx];
+}
+
+inline cbptr Uart::getCb(int idx) {
+    auto ctx = getCtx(idx);
+    if (ctx->cb == nullptr)
+        ctx->cb = std::make_shared<UartCallback>(ctx->fd, ctx->option);
+    return ctx->cb;
 }
 
 void Uart::open(const int index) {
@@ -51,31 +55,23 @@ void Uart::open(const int index) {
     }
 
     {
-        char bufferSize[128];
         const auto ctx = std::make_shared<uartContext>();
-
-        property_get(UART_CALLBACK_SIZE_PROPERTY,
-                bufferSize, DEFAULT_BUFFER_SIZE);
-        ctx->callbackBufferSize = atoi(bufferSize);
-        if (ctx->callbackBufferSize == 0)
-            ctx->callbackBufferSize = atoi(DEFAULT_BUFFER_SIZE);
-        ctx->callback = NULL;
-        ctx->fd = fd;
-        tcgetattr(fd, &(ctx->option));
-        ctx->backup_option = ctx->option;
-
-        ctx->option.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP
-                | INLCR | IGNCR | ICRNL | IXON);
-        ctx->option.c_oflag &= ~OPOST;
-        ctx->option.c_lflag &= ~(ECHO |ECHONL | ICANON | ISIG | IEXTEN);
-        tcsetattr(fd, TCSANOW, &(ctx->option));
-
-        ctx->readBuffer = NULL;
-
-        pthread_mutex_init(&ctx->mutex, NULL);
-
+        ctx->init(fd);
         uart.insert(std::make_pair(index, ctx));
     }
+}
+
+void uartContext::init(int fd) {
+        this->fd = fd;
+        tcgetattr(fd, &option);
+        backup_option = option;
+
+        option.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP
+                | INLCR | IGNCR | ICRNL | IXON);
+        option.c_oflag &= ~OPOST;
+        option.c_lflag &= ~(ECHO |ECHONL | ICANON | ISIG | IEXTEN);
+        tcsetattr(fd, TCSANOW, &option);
+        cb = nullptr;
 }
 
 void Uart::close(const int index) {
@@ -83,8 +79,6 @@ void Uart::close(const int index) {
     auto ctx= getCtx(index);
 
     tcsetattr(ctx->fd, TCSANOW, &(ctx->backup_option));
-
-    pthread_mutex_destroy(&ctx->mutex);
 
     ::close(ctx->fd);
     uart.erase(index);
@@ -311,28 +305,19 @@ bool Uart::setStopBits(const int index, const int bits) {
 
 std::vector<uint8_t> Uart::read(const int index, const int length) {
     const auto ctx = getCtx(index);
-    char *buffer = new char[length]{};
+    auto cb = getCb(index);
 
-    if (ctx->readBuffer == NULL) {
-    auto ret = ::read(ctx->fd, buffer, length);
-    if (ret < 0) {
-        delete[] buffer;
-        std::vector<uint8_t> empty(0);
-        return empty;
-    }
-    std::vector<uint8_t> result(buffer, buffer + ret);
-    delete[] buffer;
-
-    return result;
+    if (cb->isCb()) {
+        return cb->read(length);
     } else {
-        auto ret = ring_buffer_dequeue_arr(ctx->readBuffer, buffer, (ring_buffer_size_t)length);
-    if (ret < 0) {
-        delete[] buffer;
-        std::vector<uint8_t> empty(0);
-        return empty;
-    }
-        std::vector<uint8_t> result (buffer, buffer + ret);
-        delete[] buffer;
+        auto buffer = std::make_unique<uint8_t[]>(length);
+
+        auto ret = ::read(ctx->fd, buffer.get(), length);
+        if (ret < 0) {
+            std::vector<uint8_t> empty(0);
+            return empty;
+        }
+        std::vector<uint8_t> result(buffer.get(), buffer.get() + ret);
 
         return result;
     }
@@ -340,117 +325,25 @@ std::vector<uint8_t> Uart::read(const int index, const int length) {
 
 ssize_t Uart::write(const int index, const std::vector<uint8_t> data, const int length) {
     const auto ctx = getCtx(index);
-    uint8_t *buffer = new uint8_t[length];
+    auto buffer = std::make_unique<uint8_t[]>(length);
 
-    std::copy(data.begin(), data.end(), buffer);
+    std::copy(data.begin(), data.end(), buffer.get());
 
-    ssize_t result = ::write(ctx->fd, buffer, length);
-    delete[] buffer;
+    ssize_t result = ::write(ctx->fd, buffer.get(), length);
 
     return result;
 }
 
 void Uart::registerCallback(const int index, function_t callback) {
+    auto cb = getCb(index);
     const auto ctx = getCtx(index);
-
-    if (ctx->callback == NULL) {
-        pthread_mutex_lock(&(ctx->mutex));
-        ctx->callback = callback;
-        ctx->backup_callback_option = ctx->option;
-
-        ctx->readBuffer = new ring_buffer_t;
-        char *buffer = new char[ctx->callbackBufferSize]{};
-        ring_buffer_init(ctx->readBuffer, buffer, ctx->callbackBufferSize);
-
-        pthread_mutex_unlock(&(ctx->mutex));
-
-        int flags = fcntl(ctx->fd, F_GETFL, 0);
-        flags |= O_NONBLOCK;
-        fcntl(ctx->fd, F_SETFL, flags);
-
-        std::thread callbackThread = std::thread(&Uart::callbackRun, this, index);
-        ctx->callbackThread = callbackThread.native_handle();
-        callbackThread.detach();
-    }
+    cb->registerCb(callback);
 }
 
 void Uart::unregisterCallback(const int index) {
     const auto ctx = getCtx(index);
-    int ret = pthread_kill(ctx->callbackThread, 0);
+    auto cb = getCb(index);
 
-    pthread_mutex_lock(&(ctx->mutex));
-    ALOGD("unregister callback - %d", ret);
-    ctx->callback = NULL;
-    ctx->option = ctx->backup_callback_option;
-
-    delete[] ctx->readBuffer->buffer;
-    delete ctx->readBuffer;
-    ctx->readBuffer = NULL;
-
-    pthread_mutex_unlock(&(ctx->mutex));
-
-    int flags = fcntl(ctx->fd, F_GETFL, 0);
-    flags &= ~O_NONBLOCK;
-    fcntl(ctx->fd, F_SETFL, flags);
-
+    cb->unregisterCb();
     tcsetattr(ctx->fd, TCSANOW, &(ctx->option));
-}
-
-#define EPOLL_MAX_CONN 2
-#define MAX_EVENTS 128
-
-void Uart::callbackRun(const int index) {
-    const auto ctx = getCtx(index);
-    struct epoll_event ev;
-    struct epoll_event events[MAX_EVENTS];
-    int epfd;
-    char *buffer = new char[ctx->callbackBufferSize];
-
-    int timeout = 1000;
-
-    ctx->option.c_cc[VMIN] = 1;
-    ctx->option.c_cc[VTIME] = 0;
-
-    tcflush(ctx->fd, TCIOFLUSH);
-    tcsetattr(ctx->fd, TCSANOW, &(ctx->option));
-
-    epfd = epoll_create(EPOLL_MAX_CONN);
-    ev.events = EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP;
-    ev.data.fd = ctx->fd;
-    int ret = epoll_ctl(epfd, EPOLL_CTL_ADD, ctx->fd, &ev);
-
-    if (ret < 0) {
-        ALOGE("err epoll_ctl %i", errno);
-        delete[] buffer;
-        return;
-    }
-
-    while (1) {
-        int event_count;
-        event_count = epoll_wait(epfd, events, MAX_EVENTS, timeout);
-
-        if (ctx->callback == NULL) {
-            ALOGE("call back is null!");
-            delete[] buffer;
-            return;
-        }
-
-        if (event_count < 0) {
-            ALOGE("err epoll_count %d", event_count);
-            delete[] buffer;
-            return;
-        }
-        pthread_mutex_lock(&(ctx->mutex));
-        for (int i=0; i < event_count; i++) {
-            auto length = ::read(ctx->fd, buffer, ctx->callbackBufferSize);
-            if (length < 0) {
-                ALOGE("read Error : %s", strerror(errno));
-            } else {
-                ring_buffer_queue_arr(ctx->readBuffer, buffer, length);
-                ctx->callback();
-            }
-        }
-        pthread_mutex_unlock(&(ctx->mutex));
-    }
-    delete[] buffer;
 }

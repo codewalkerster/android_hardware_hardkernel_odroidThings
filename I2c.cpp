@@ -33,7 +33,7 @@ I2c::I2c(std::vector<i2c_t> list) {
 }
 
 inline i2cCtxPtr I2c::getCtx(int idx) {
-    return i2c.find(idx)->second;
+    return i2c[idx];
 }
 
 inline void I2c::getProperty(const i2cCtxPtr& ctx) {

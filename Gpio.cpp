@@ -35,7 +35,7 @@ std::vector<std::string> Gpio::getList() {
 }
 
 inline gpioCtxPtr Gpio::getCtx(int idx) {
-    return gpio.find(idx)->second;
+    return gpio[idx];
 }
 
 inline cbPtr Gpio::getCb(int idx) {
@@ -43,6 +43,10 @@ inline cbPtr Gpio::getCb(int idx) {
     if (ctx->cb == nullptr)
         ctx->cb = std::make_shared<GpioCallback>(wpiPinToGpio(ctx->pin));
     return ctx->cb;
+}
+
+inline int Gpio::getPin(int idx) {
+    return gpio[idx]->pin;
 }
 
 void Gpio::open(int idx) {
@@ -53,16 +57,15 @@ void Gpio::open(int idx) {
 }
 
 void Gpio::close(int idx) {
-    const auto ctx = getCtx(idx);
     gpio.erase(idx);
 }
 
 bool Gpio::getValue(int idx) {
-    return (digitalRead(getCtx(idx)->pin) == HIGH);
+    return (digitalRead(getPin(idx)) == HIGH);
 }
 
 void Gpio::setDirection(int idx, direction_t direction) {
-    int pin = getCtx(idx)->pin;
+    int pin = getPin(idx);
     switch (direction) {
         case DIRECTION_IN:
             pinMode(pin, INPUT);
@@ -79,11 +82,11 @@ void Gpio::setDirection(int idx, direction_t direction) {
 }
 
 void Gpio::setValue(int idx, bool value) {
-    digitalWrite(getCtx(idx)->pin, value?HIGH:LOW);
+    digitalWrite(getPin(idx), value?HIGH:LOW);
 }
 
 void Gpio::setActiveType(int idx, int activeType) {
-    int pin = getCtx(idx)->pin;
+    int pin = getPin(idx);
     switch (activeType) {
         case ACTIVE_LOW:
             pullUpDnControl(pin, PUD_UP);
