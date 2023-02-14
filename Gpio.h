@@ -19,7 +19,6 @@
 #ifndef GPIO_H_
 #define GPIO_H_
 
-#include "Board.h"
 #include "GpioCallback.h"
 #include <hardware/odroidThings.h>
 #include <map>
@@ -33,14 +32,14 @@ struct gpioContext {
     gpioContext(int pin): pin(pin), cb(nullptr) {};
 };
 
-using boardPtr = std::shared_ptr<Board>;
 using gpioCtxPtr = std::shared_ptr<gpioContext>;
 using hardware::hardkernel::odroidthings::function_t;
+using hardware::hardkernel::odroidthings::pin_t;
 
 class Gpio {
     private:
         std::map<int, gpioCtxPtr> gpio;
-        boardPtr board;
+        std::map<int, pin_t> gpioList;
 
         enum ActiveType {
             ACTIVE_LOW,
@@ -51,7 +50,7 @@ class Gpio {
         inline int getPin(int);
 
     public:
-        Gpio(boardPtr board): board(board) {};
+        Gpio(std::vector<pin_t>);
         std::vector<std::string> getList();
         void open(int);
         void close(int);

@@ -19,16 +19,19 @@
 #include "Gpio.h"
 #include <wiringPi/wiringPi.h>
 
+Gpio::Gpio(std::vector<pin_t> list) {
+    for(unsigned long i = 0; i<list.size(); i++)
+        if (list[i].availableModes & PIN_GPIO)
+            gpioList.insert(std::make_pair(i, list[i]));
+}
+
 std::vector<std::string> Gpio::getList() {
     std::vector<std::string> list;
-    auto pinList = board->getPinList();
 
-    for (auto pin = pinList.begin(); pin != pinList.end(); pin++) {
-        if (pin->availableModes & PIN_GPIO) {
-            int alt = getAlt(pin->pin);
-            if (alt < 2)
-                list.push_back(pin->name);
-        }
+    for (auto pin = gpioList.begin(); pin != gpioList.end(); pin++) {
+        int alt = getAlt(pin->second.pin);
+        if (alt < 2)
+            list.push_back(pin->second.name);
     }
 
     return list;
@@ -52,7 +55,7 @@ inline int Gpio::getPin(int idx) {
 void Gpio::open(int idx) {
     const auto ctx = std::make_shared<gpioContext>(idx);
 
-    ctx->pin = board->getPin(idx);
+    ctx->pin = gpioList[idx].pin;
     gpio.insert(std::make_pair(idx, ctx));
 }
 

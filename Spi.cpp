@@ -35,9 +35,14 @@ inline spiCtxPtr Spi::getCtx(int idx) {
 }
 
 std::vector<std::string> Spi::getList() {
-    std::vector<std::string> list;
+    static std::vector<std::string> list;
+
+    if (list.size())
+        return list;
+
     for(auto spi = spiList.begin(); spi != spiList.end(); spi++)
         list.push_back(spi->name);
+
     return list;
 }
 

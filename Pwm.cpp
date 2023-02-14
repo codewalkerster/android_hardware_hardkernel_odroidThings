@@ -24,10 +24,16 @@
 
 using Helper::writeSysfsTo;
 
-Pwm::Pwm(boardPtr board): board(board) {
+Pwm::Pwm(boardPtr board) {
     auto list = board->getPwmList();
     for (auto pin = list.begin(); pin != list.end(); pin++)
         initContext(pin->index, pin->chip, pin->line);
+
+    auto pinList = board->getPinList();
+    for (unsigned long i=0; i<pinList.size(); i++)
+        if (pinList[i].availableModes & PIN_PWM)
+            if (pwm.count(pinList[i].pin) > 0)
+                pwmList.insert(std::make_pair(i, pinList[i]));
 }
 
 void Pwm::initContext(int idx, uint8_t chip, uint8_t node) {
@@ -53,21 +59,17 @@ void Pwm::initContext(int idx, uint8_t chip, uint8_t node) {
 }
 
 inline pwmCtxPtr Pwm::getCtx(int idx) {
-    auto pin = board->getPin(idx);
-    return pwm[pin];
+    return pwm [pwmList[idx].pin];
 }
 
 std::vector<std::string> Pwm::getList() {
-    std::vector<std::string> list;
-    auto pinList = board->getPinList();
+    static std::vector<std::string> list;
 
-    for (auto pin = pinList.begin(); pin != pinList.end(); pin++) {
-        if (pin->availableModes & PIN_PWM) {
-            if (pwm.count(pin->pin) > 0) {
-                list.push_back(pin->name);
-            }
-        }
-    }
+    if (list.size())
+        return list;
+
+    for (auto it = pwmList.begin(); it != pwmList.end(); ++it)
+        list.push_back (it->second.name);
 
     return list;
 }

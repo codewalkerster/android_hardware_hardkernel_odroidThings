@@ -41,8 +41,8 @@ using pwmCtxPtr = std::shared_ptr<pwmContext>;
 
 class Pwm {
     private:
-        boardPtr board;
         std::map<int, pwmCtxPtr> pwm;
+        std::map<int, pin_t> pwmList;
 
         void initContext(int, uint8_t, uint8_t);
         inline pwmCtxPtr getCtx(int);

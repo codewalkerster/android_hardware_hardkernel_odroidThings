@@ -99,7 +99,7 @@ std::vector<std::string> PinManager::getPinNameList() {
 }
 
 std::unique_ptr<Gpio> PinManager::getGpio() {
-    auto gpio = std::make_unique<Gpio>(board);
+    auto gpio = std::make_unique<Gpio>(board->getPinList());
     return gpio;
 }
 

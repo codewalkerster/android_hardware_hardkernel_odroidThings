@@ -68,9 +68,14 @@ inline uint8_t *I2c::getRegBuffer(const uint8_t size, uint32_t regAddress) {
 }
 
 std::vector<std::string> I2c::getList() {
-    std::vector<std::string> list;
+    static std::vector<std::string> list;
+
+    if (list.size())
+        return list;
+
     for (size_t i=0; i < i2cList.size(); i++)
         list.push_back(i2cList[i].name);
+
     return list;
 }
 
