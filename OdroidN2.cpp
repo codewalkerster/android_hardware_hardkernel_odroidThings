@@ -39,10 +39,15 @@ OdroidN2::OdroidN2() {
     uartList = {
         {"UART-1", "/dev/ttyS1", "10", "8"},
         {"UART-2", "/dev/ttyS2", "15", "35"},
+        {"UART-USB-0", "/dev/ttyUSB0", "", ""},
+        {"UART-USB-1", "/dev/ttyUSB1", "", ""},
+        {"UART-ACM-0", "/dev/ttyACM0", "", ""},
+        {"UART-ACM-1", "/dev/ttyACM1", "", ""},
     };
 
     spiList = {
         {"SPI0.0", "/dev/spidev0.0"},
+        {"SPI0.1", "/dev/spidev0.1"},
     };
 
     Board("odroidn2");

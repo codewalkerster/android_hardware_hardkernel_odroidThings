@@ -41,10 +41,15 @@ OdroidC4::OdroidC4() {
         {"UART-2", "/dev/ttyS2", "15", "35"},
         {"UART-3", "/dev/ttyS3", "26", "32"},
         {"UART-4", "/dev/ttyS4", "2", "6"},
+        {"UART-USB-0", "/dev/ttyUSB0", "", ""},
+        {"UART-USB-1", "/dev/ttyUSB1", "", ""},
+        {"UART-ACM-0", "/dev/ttyACM0", "", ""},
+        {"UART-ACM-1", "/dev/ttyACM1", "", ""},
     };
 
     spiList = {
         {"SPI0.0", "/dev/spidev0.0"},
+        {"SPI0.1", "/dev/spidev0.1"},
     };
 
     Board("odroidc4");
