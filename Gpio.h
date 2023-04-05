@@ -22,6 +22,7 @@
 #include "GpioCallback.h"
 #include <hardware/odroidThings.h>
 #include <map>
+#include <pthread.h>
 #include <vector>
 
 using cbPtr = std::shared_ptr<GpioCallback>;
@@ -30,6 +31,7 @@ struct gpioContext {
     int pin;
     cbPtr cb;
     gpioContext(int pin): pin(pin), cb(nullptr) {};
+    pthread_mutex_t mutex;
 };
 
 using gpioCtxPtr = std::shared_ptr<gpioContext>;

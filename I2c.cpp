@@ -96,6 +96,7 @@ void I2c::open(const int busIdx, const uint32_t address, const int idx) {
     ctx->fd = fd;
     ctx->busIdx = busIdx;
     ctx->deviceAddress = address;
+    pthread_mutex_init(&ctx->mutex, NULL);
 
     getProperty(ctx);
 
@@ -105,6 +106,7 @@ void I2c::open(const int busIdx, const uint32_t address, const int idx) {
 void I2c::close(const int idx) {
     const auto ctx = getCtx(idx);
     ::close(ctx->fd);
+    pthread_mutex_destroy(&ctx->mutex);
     i2c.erase(idx);
 }
 
@@ -113,9 +115,11 @@ const std::vector<uint8_t> I2c::read(const int idx, const int length) {
 
     uint8_t *buffer = new uint8_t[length];
 
+    pthread_mutex_lock(&ctx->mutex);
     ::read(ctx->fd, buffer, length);
 
     std::vector<uint8_t> result(buffer, buffer+length);
+    pthread_mutex_unlock(&ctx->mutex);
     delete[] buffer;
 
     return result;
@@ -127,6 +131,7 @@ const std::vector<uint8_t> I2c::readRegBuffer(const int idx,
 
     uint8_t *buffer = new uint8_t[length];
 
+    pthread_mutex_lock(&ctx->mutex);
     int regSize = getRegBufSize(ctx, regAddress);
     uint8_t *regBuf = getRegBuffer(regSize, regAddress);
 
@@ -134,6 +139,7 @@ const std::vector<uint8_t> I2c::readRegBuffer(const int idx,
     ::read(ctx->fd, buffer, length);
 
     std::vector<uint8_t> result(buffer, buffer+length);
+    pthread_mutex_unlock(&ctx->mutex);
     delete[] buffer;
     delete[] regBuf;
 
@@ -145,11 +151,13 @@ uint16_t I2c::readRegWord(const int idx, const uint32_t regAddress) {
 
     uint8_t buffer[2];
 
+    pthread_mutex_lock(&ctx->mutex);
     int regSize = getRegBufSize(ctx, regAddress);
     uint8_t *regBuf = getRegBuffer(regSize, regAddress);
 
     ::write(ctx->fd, regBuf, regSize);
     ::read(ctx->fd, buffer, 2);
+    pthread_mutex_unlock(&ctx->mutex);
 
     delete[] regBuf;
 
@@ -161,11 +169,13 @@ uint8_t I2c::readRegByte(const int idx, const uint32_t regAddress) {
 
     uint8_t buffer;
 
+    pthread_mutex_lock(&ctx->mutex);
     int regSize = getRegBufSize(ctx, regAddress);
     uint8_t *regBuf = getRegBuffer(regSize, regAddress);
 
     ::write(ctx->fd, regBuf, regSize);
     ::read(ctx->fd, &buffer, 1);
+    pthread_mutex_unlock(&ctx->mutex);
 
     delete[] regBuf;
 
@@ -178,9 +188,11 @@ Result I2c::write(const int idx, std::vector<uint8_t> transferData,
 
     uint8_t *buffer = new uint8_t[length];
 
+    pthread_mutex_lock(&ctx->mutex);
     std::copy(transferData.begin(), transferData.end(), buffer);
 
     ::write(ctx->fd, buffer, length);
+    pthread_mutex_unlock(&ctx->mutex);
 
     delete[] buffer;
 
@@ -191,6 +203,7 @@ Result I2c::writeRegBuffer(const int idx, const uint32_t regAddress,
         std::vector<uint8_t> transferData, const int length) {
     const auto ctx = getCtx(idx);
 
+    pthread_mutex_lock(&ctx->mutex);
     int regSize = getRegBufSize(ctx, regAddress);
     uint8_t *regBuf = getRegBuffer(regSize, regAddress);
 
@@ -202,6 +215,7 @@ Result I2c::writeRegBuffer(const int idx, const uint32_t regAddress,
     std::copy(transferData.begin(), transferData.end(), buffer+regSize);
 
     ::write(ctx->fd, buffer, length + regSize);
+    pthread_mutex_unlock(&ctx->mutex);
 
     delete[] buffer;
 
@@ -212,6 +226,7 @@ Result I2c::writeRegWord(const int idx, const uint32_t regAddress,
         uint16_t transferData) {
     const auto ctx = getCtx(idx);
 
+    pthread_mutex_lock(&ctx->mutex);
     int regSize = getRegBufSize(ctx, regAddress);
     uint8_t *regBuf = getRegBuffer(regSize, regAddress);
 
@@ -227,6 +242,7 @@ Result I2c::writeRegWord(const int idx, const uint32_t regAddress,
     buffer[i] = (uint8_t)(transferData & 0xFF);
 
     ::write(ctx->fd, buffer, sizeof(uint16_t) + regSize);
+    pthread_mutex_unlock(&ctx->mutex);
 
     delete[] buffer;
 
@@ -237,6 +253,7 @@ Result I2c::writeRegByte(const int idx, const uint32_t regAddress,
         uint8_t transferData) {
     const auto ctx = getCtx(idx);
 
+    pthread_mutex_lock(&ctx->mutex);
     int regSize = getRegBufSize(ctx, regAddress);
     uint8_t *regBuf = getRegBuffer(regSize, regAddress);
 
@@ -248,6 +265,7 @@ Result I2c::writeRegByte(const int idx, const uint32_t regAddress,
     buffer[i] = transferData;
 
     ::write(ctx->fd, buffer, sizeof(uint8_t) + regSize);
+    pthread_mutex_unlock(&ctx->mutex);
 
     delete[] buffer;
 

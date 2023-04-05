@@ -56,19 +56,31 @@ void Gpio::open(int idx) {
     const auto ctx = std::make_shared<gpioContext>(idx);
 
     ctx->pin = gpioList[idx].pin;
+    pthread_mutex_init(&ctx->mutex, NULL);
     gpio.insert(std::make_pair(idx, ctx));
 }
 
 void Gpio::close(int idx) {
+    const auto ctx = getCtx(idx);
+    pthread_mutex_destroy(&ctx->mutex);
     gpio.erase(idx);
 }
 
 bool Gpio::getValue(int idx) {
-    return (digitalRead(getPin(idx)) == HIGH);
+    const auto ctx = getCtx(idx);
+
+    pthread_mutex_lock(&ctx->mutex);
+    auto pin = getPin(idx);
+    bool value = (digitalRead(pin) == HIGH);
+    pthread_mutex_unlock(&ctx->mutex);
+    return value;
 }
 
 void Gpio::setDirection(int idx, direction_t direction) {
-    int pin = getPin(idx);
+    const auto ctx = getCtx(idx);
+
+    pthread_mutex_lock(&ctx->mutex);
+    auto pin = getPin(idx);
     switch (direction) {
         case DIRECTION_IN:
             pinMode(pin, INPUT);
@@ -82,14 +94,22 @@ void Gpio::setDirection(int idx, direction_t direction) {
             digitalWrite(pin, LOW);
             break;
     }
+    pthread_mutex_unlock(&ctx->mutex);
 }
 
 void Gpio::setValue(int idx, bool value) {
+    const auto ctx = getCtx(idx);
+
+    pthread_mutex_lock(&ctx->mutex);
     digitalWrite(getPin(idx), value?HIGH:LOW);
+    pthread_mutex_unlock(&ctx->mutex);
 }
 
 void Gpio::setActiveType(int idx, int activeType) {
-    int pin = getPin(idx);
+    const auto ctx = getCtx(idx);
+
+    pthread_mutex_lock(&ctx->mutex);
+    auto pin = getPin(idx);
     switch (activeType) {
         case ACTIVE_LOW:
             pullUpDnControl(pin, PUD_UP);
@@ -98,6 +118,7 @@ void Gpio::setActiveType(int idx, int activeType) {
             pullUpDnControl(pin, PUD_DOWN);
             break;
     }
+    pthread_mutex_unlock(&ctx->mutex);
 }
 
 void Gpio::setEdgeTriggerType(int idx, int edgeTriggerType) {

@@ -21,6 +21,7 @@
 
 #include <hardware/odroidThings.h>
 #include <map>
+#include <pthread.h>
 #include <vector>
 
 using hardware::hardkernel::odroidthings::i2c_t;
@@ -30,6 +31,7 @@ struct i2cContext{
     int busIdx;
     uint32_t deviceAddress;
     uint8_t regBufSize;
+    pthread_mutex_t mutex;
 };
 
 using i2cCtxPtr = std::shared_ptr<i2cContext>;
