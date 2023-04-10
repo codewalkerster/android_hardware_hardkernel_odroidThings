@@ -25,8 +25,8 @@ OdroidN2::OdroidN2() {
     };
 
     i2cList = {
-        {"I2C-1", "/dev/i2c-0", "3", "5"},
-        {"I2C-2", "/dev/i2c-1", "27", "28"},
+        {"I2C-1", "/dev/i2c-0", 8, 9}, // Pin #3, #5
+        {"I2C-2", "/dev/i2c-1", 30, 31}, // Pin #27, #28
     };
 
     pwmList = {
@@ -37,17 +37,17 @@ OdroidN2::OdroidN2() {
     };
 
     uartList = {
-        {"UART-1", "/dev/ttyS1", "10", "8"},
-        {"UART-2", "/dev/ttyS2", "15", "35"},
-        {"UART-USB-0", "/dev/ttyUSB0", "", ""},
-        {"UART-USB-1", "/dev/ttyUSB1", "", ""},
-        {"UART-ACM-0", "/dev/ttyACM0", "", ""},
-        {"UART-ACM-1", "/dev/ttyACM1", "", ""},
+        {"UART-1", "/dev/ttyS1", 16, 15}, // Pin #10, #8
+        {"UART-2", "/dev/ttyS2", 3, 24}, // Pin #15, #35
+        {"UART-USB-0", "/dev/ttyUSB0", -1, -1},
+        {"UART-USB-1", "/dev/ttyUSB1", -1, -1},
+        {"UART-ACM-0", "/dev/ttyACM0", -1, -1},
+        {"UART-ACM-1", "/dev/ttyACM1", -1, -1},
     };
 
-    spiList = {
-        {"SPI0.0", "/dev/spidev0.0"},
-        {"SPI0.1", "/dev/spidev0.1"},
+    spiList = { // Pin #19, #21, #23
+        {"SPI0.0", "/dev/spidev0.0", 14, 12, 13, 10}, // Pin #24
+        {"SPI0.1", "/dev/spidev0.1", 14, 12 ,13, 11}, // Pin #26
     };
 
     Board("odroidn2");
