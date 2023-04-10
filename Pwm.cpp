@@ -45,7 +45,7 @@ void Pwm::initContext(int idx, uint8_t chip, uint8_t node) {
     // init configuration sysfs path.
     std::ostringstream pwmRoot;
 
-    pwmRoot << "/sys/class/pwm/pwmchip" << std::to_string(ctx->chip);
+    pwmRoot << getPwmChipPath(ctx->chip);
     if (access(pwmRoot.str().c_str(), F_OK) == 0) {
         pwmRoot << "/pwm" << std::to_string(ctx->node) <<"/";
         std::string pwmRootStr = pwmRoot.str();
@@ -132,4 +132,12 @@ bool Pwm::setFrequency(int idx, double frequency_hz) {
     }
 
     return true;
+}
+
+std::string Pwm::getPwmChipPath(int chip) {
+    std::ostringstream pwmRoot;
+
+    pwmRoot << "/sys/class/pwm/pwmchip" << std::to_string(chip);
+
+    return pwmRoot.str();
 }

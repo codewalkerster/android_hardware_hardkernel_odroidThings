@@ -55,5 +55,7 @@ class Pwm {
         bool setEnable(int, bool);
         bool setDutyCycle(int, double);
         bool setFrequency(int, double);
+
+        static std::string getPwmChipPath(int);
 };
 #endif /* PWM_H_ */

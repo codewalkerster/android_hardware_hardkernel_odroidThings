@@ -26,6 +26,7 @@
 #include <fstream>
 #include <sstream>
 #include <unistd.h>
+#include <set>
 
 PinManager::PinManager(){
     char boardName[PROPERTY_VALUE_MAX];
@@ -59,6 +60,13 @@ int PinManager::init() {
         ALOGD("Board is not initialized");
         return -1;
     }
+
+    // This init sequence order must be fixed.
+    initI2cList();
+    initPwmList();
+    initUartList();
+    initSpiList();
+    initGpioList();
 
     return 0;
 }
@@ -98,8 +106,75 @@ std::vector<std::string> PinManager::getPinNameList() {
     return board->getPinNameList();
 }
 
+void PinManager::initI2cList() {
+    auto i2cAllList = board->getI2cList();
+    for (auto i2c = i2cAllList.begin(); i2c != i2cAllList.end(); i2c++) {
+        if (access(i2c->path.c_str(), F_OK) == 0)
+            i2cList.push_back(*i2c);
+    }
+}
+
+void PinManager::initPwmList() {
+    auto list = board->getPwmList();
+    for (auto pin = list.begin(); pin != list.end(); pin++) {
+        std::string root = Pwm::getPwmChipPath(pin->chip);
+        if (access(root.c_str(), F_OK) == 0)
+            pwmList.push_back(*pin);
+    }
+}
+
+void PinManager::initUartList() {
+    auto uartAllList = board->getUartList();
+    for (auto uart = uartAllList.begin(); uart != uartAllList.end(); uart++) {
+        if (access(uart->path.c_str(), F_OK) == 0)
+            uartList.push_back(*uart);
+    }
+}
+
+void PinManager::initSpiList() {
+    auto spiAllList = board->getSpiList();
+    for (auto spi = spiAllList.begin(); spi != spiAllList.end(); spi++) {
+        if (access(spi->path.c_str(), F_OK) == 0) {
+            spiList.push_back(*spi);
+        }
+    }
+}
+
+void PinManager::initGpioList() {
+    std::set<int> usedPinList;
+
+    for (auto i2c = i2cList.begin(); i2c != i2cList.end(); i2c++) {
+        usedPinList.insert(i2c->sda);
+        usedPinList.insert(i2c->scl);
+    }
+
+    for (auto pwm = pwmList.begin(); pwm != pwmList.end(); pwm++) {
+        usedPinList.insert(pwm->index);
+    }
+
+    for (auto uart = uartList.begin(); uart != uartList.end(); uart++) {
+        usedPinList.insert(uart->rx);
+        usedPinList.insert(uart->tx);
+    }
+
+    for (auto spi = spiList.begin(); spi != spiList.end(); spi++) {
+        usedPinList.insert(spi->sclk);
+        usedPinList.insert(spi->mosi);
+        usedPinList.insert(spi->miso);
+        usedPinList.insert(spi->cs);
+    }
+
+    auto list = board->getPinList();
+
+    for (auto pin = list.begin(); pin != list.end(); pin++) {
+        auto search = usedPinList.find(pin->pin);
+        if (search == usedPinList.end())
+            gpioList.push_back(*pin);
+    }
+}
+
 std::unique_ptr<Gpio> PinManager::getGpio() {
-    auto gpio = std::make_unique<Gpio>(board->getPinList());
+    auto gpio = std::make_unique<Gpio>(gpioList);
     return gpio;
 }
 
@@ -109,38 +184,23 @@ std::unique_ptr<Pwm> PinManager::getPwm() {
 }
 
 std::unique_ptr<I2c> PinManager::getI2c() {
-    auto i2cList = board->getI2cList();
-    std::vector<i2c_t> list;
-    for (auto i2c = i2cList.begin(); i2c != i2cList.end(); i2c++) {
-        if (access(i2c->path.c_str(), F_OK) == 0)
-            list.push_back(*i2c);
-    }
-
-    if (list.size()) {
-        auto i2c = std::make_unique<I2c>(list);
+    if (i2cList.size()) {
+        auto i2c = std::make_unique<I2c>(i2cList);
         return i2c;
     } else
         return NULL;
 }
 
 std::unique_ptr<Uart> PinManager::getUart() {
-    auto uartList = board->getUartList();
-    std::vector<uart_t> list;
-    for (auto uart = uartList.begin(); uart != uartList.end(); uart++) {
-        if (access(uart->path.c_str(), F_OK) == 0)
-            list.push_back(*uart);
-    }
-
-    if (list.size()) {
-        auto uart = std::make_unique<Uart>(list);
+    if (uartList.size()) {
+        auto uart = std::make_unique<Uart>(uartList);
         return uart;
     } else
         return NULL;
 }
 
 std::unique_ptr<Spi> PinManager::getSpi() {
-    auto spiList = board->getSpiList();
-    if (access(spiList[0].path.c_str(), F_OK) == 0) {
+    if (spiList.size()) {
         std::unique_ptr<Spi> spi = std::make_unique<Spi>(spiList);
         return spi;
     }

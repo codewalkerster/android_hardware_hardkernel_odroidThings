@@ -50,9 +50,20 @@ class PinManager {
             "M1",
         };
 
-        // helper function
-       bool isUnknownBoard();
+        std::vector<i2c_t> i2cList;
+        std::vector<uart_t> uartList;
+        std::vector<pwm_t> pwmList;
+        std::vector<spi_t> spiList;
+        std::vector<pin_t> gpioList;
 
+        // helper function
+        bool isUnknownBoard();
+
+        void initI2cList();
+        void initPwmList();
+        void initUartList();
+        void initSpiList();
+        void initGpioList();
     public:
         PinManager();
         int init();
