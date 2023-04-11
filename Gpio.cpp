@@ -26,7 +26,10 @@ Gpio::Gpio(std::vector<pin_t> list) {
 }
 
 std::vector<std::string> Gpio::getList() {
-    std::vector<std::string> list;
+    static std::vector<std::string> list;
+
+    if (list.size())
+        return list;
 
     for (auto pin = gpioList.begin(); pin != gpioList.end(); pin++) {
         int alt = getAlt(pin->second.pin);
