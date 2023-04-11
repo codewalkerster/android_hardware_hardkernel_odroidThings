@@ -28,7 +28,7 @@ struct pwmContext {
     unsigned int period;
     double cycle_rate;
 
-    uint8_t chip;
+    std::string rootPath;
     uint8_t node;
     std::string periodPath;
     std::string dutyCyclePath;
@@ -44,8 +44,9 @@ class Pwm {
         std::map<int, pwmCtxPtr> pwm;
         std::map<int, pin_t> pwmList;
 
-        void initContext(int, uint8_t, uint8_t);
+        void initContext(int, std::string, uint8_t);
         inline pwmCtxPtr getCtx(int);
+        std::string getRootPath(std::string);
 
     public:
         Pwm(boardPtr);
@@ -55,7 +56,5 @@ class Pwm {
         bool setEnable(int, bool);
         bool setDutyCycle(int, double);
         bool setFrequency(int, double);
-
-        static std::string getPwmChipPath(int);
 };
 #endif /* PWM_H_ */

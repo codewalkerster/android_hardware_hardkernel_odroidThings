@@ -30,10 +30,26 @@ OdroidN2::OdroidN2() {
     };
 
     pwmList = {
-        {1, 8, 0}, // Pin #12
-        {3, 8 ,1}, // Pin #15
-        {23, 4, 0}, // Pin #33
-        {24, 4, 1}, // Pin #35
+        { // Pin #12
+            .index = 1,
+            .path =  "/sys/devices/platform/soc/ffd00000.cbus/ffd19000.pwm",
+            .line = 0
+        },
+        { // Pin #15
+            .index = 3,
+            .path = "/sys/devices/platform/soc/ffd00000.cbus/ffd19000.pwm",
+            .line = 1
+        },
+        { // Pin #33
+            .index = 23,
+            .path = "/sys/devices/platform/soc/ffd00000.cbus/ffd1a000.pwm",
+            .line = 0
+        },
+        { // Pin #35
+            .index = 24,
+            .path = "/sys/devices/platform/soc/ffd00000.cbus/ffd1a000.pwm",
+            .line = 1
+        },
     };
 
     uartList = {

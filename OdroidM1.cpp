@@ -30,9 +30,21 @@ OdroidM1::OdroidM1() {
     };
 
     pwmList = {
-        {7, 1, 0}, // Pin #7
-        {3, 2 ,0}, // Pin #15
-        {23, 0, 0}, // Pin #33
+        { // Pin #7
+            .index = 7,
+            .path = "/sys/devices/platform/fdd70020.pwm",
+            .line = 0
+        },
+        { // Pin #15
+            .index = 3,
+            .path = "/sys/devices/platform/fe6f0010.pwm",
+            .line = 0
+        },
+        { // Pin #33
+            .index = 23,
+            .path =  "/sys/devices/platform/fdd70010.pwm",
+            .line = 0
+        },
     };
 
     uartList = {

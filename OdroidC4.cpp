@@ -6,9 +6,9 @@ OdroidC4::OdroidC4() {
         {"3.3V", -1, PIN_PWR}, {"5V", -1, PIN_PWR},
         {"3", 8, PIN_GPIO|PIN_I2C}, {"5V", -1, PIN_PWR},
         {"5", 9, PIN_GPIO|PIN_I2C}, {"GND", -1, PIN_GND},
-        {"7", 7, PIN_GPIO}, {"8", 15, PIN_GPIO|PIN_UART},
+        {"7", 7, PIN_GPIO|PIN_PWM}, {"8", 15, PIN_GPIO|PIN_UART},
         {"GND", -1, PIN_GND}, {"10", 16, PIN_GPIO|PIN_UART},
-        {"11", 0, PIN_GPIO}, {"12", 1, PIN_GPIO|PIN_PWM},
+        {"11", 0, PIN_GPIO|PIN_PWM}, {"12", 1, PIN_GPIO|PIN_PWM},
         {"13", 2, PIN_GPIO}, {"GND", -1, PIN_GND},
         {"15", 3, PIN_GPIO|PIN_PWM|PIN_UART}, {"16", 4, PIN_GPIO},
         {"3.3V", -1, PIN_PWR}, {"18", 5, PIN_GPIO},
@@ -30,10 +30,36 @@ OdroidC4::OdroidC4() {
     };
 
     pwmList = {
-        {1, 4, 0}, // Pin #12
-        {3, 4 ,1}, // Pin #15
-        {23, 0, 0}, // Pin #33
-        {24, 0, 1}, // Pin #35
+        { // Pin #7
+            .index = 7,
+            .path = "/sys/devices/platform/soc/ffd00000.cbus/ffd1a000.pwm",
+            .line = 0
+        },
+        { // Pin #11
+            .index = 0,
+            .path = "/sys/devices/platform/soc/ffd00000.cbus/ffd1a000.pwm",
+            .line = 1
+        },
+        { // Pin #12
+            .index = 1,
+            .path = "/sys/devices/platform/soc/ffd00000.cbus/ffd19000.pwm",
+            .line = 0
+        },
+        { // Pin #15
+            .index = 3,
+            .path = "/sys/devices/platform/soc/ffd00000.cbus/ffd19000.pwm",
+            .line = 1
+        },
+        { // Pin #33
+            .index = 23,
+            .path =  "/sys/devices/platform/soc/ffd00000.cbus/ffd1b000.pwm",
+            .line = 0
+        },
+        { // Pin #35
+            .index = 24,
+            .path = "/sys/devices/platform/soc/ffd00000.cbus/ffd1b000.pwm",
+            .line = 1
+        },
     };
 
     uartList = {

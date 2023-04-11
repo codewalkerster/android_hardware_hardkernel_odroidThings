@@ -117,8 +117,7 @@ void PinManager::initI2cList() {
 void PinManager::initPwmList() {
     auto list = board->getPwmList();
     for (auto pin = list.begin(); pin != list.end(); pin++) {
-        std::string root = Pwm::getPwmChipPath(pin->chip);
-        if (access(root.c_str(), F_OK) == 0)
+        if (access(pin->path.c_str(), F_OK) == 0)
             pwmList.push_back(*pin);
     }
 }

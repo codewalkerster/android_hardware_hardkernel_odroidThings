@@ -21,13 +21,14 @@
 #include <cutils/log.h>
 #include <fstream>
 #include <sstream>
+#include <dirent.h>
 
 using Helper::writeSysfsTo;
 
 Pwm::Pwm(boardPtr board) {
     auto list = board->getPwmList();
     for (auto pin = list.begin(); pin != list.end(); pin++)
-        initContext(pin->index, pin->chip, pin->line);
+        initContext(pin->index, pin->path, pin->line);
 
     auto pinList = board->getPinList();
     for (unsigned long i=0; i<pinList.size(); i++)
@@ -36,19 +37,30 @@ Pwm::Pwm(boardPtr board) {
                 pwmList.insert(std::make_pair(i, pinList[i]));
 }
 
-void Pwm::initContext(int idx, uint8_t chip, uint8_t node) {
-    const auto ctx = std::make_shared<pwmContext>();
-    // init chip & node info
-    ctx->chip = chip;
-    ctx->node = node;
-
-    // init configuration sysfs path.
+std::string Pwm::getRootPath(std::string path) {
     std::ostringstream pwmRoot;
+    pwmRoot << path << "/pwm";
+    struct dirent *root;
+    DIR *dir = opendir(pwmRoot.str().c_str());
+    root = readdir(dir);
+    pwmRoot << "/" << root->d_name;
+    closedir(dir);
 
-    pwmRoot << getPwmChipPath(ctx->chip);
-    if (access(pwmRoot.str().c_str(), F_OK) == 0) {
-        pwmRoot << "/pwm" << std::to_string(ctx->node) <<"/";
+    return pwmRoot.str();
+}
+
+void Pwm::initContext(int idx, std::string rootPath, uint8_t node) {
+    const auto ctx = std::make_shared<pwmContext>();
+
+    if (access(rootPath.c_str(), F_OK) == 0) {
+        std::ostringstream pwmRoot;
+        ctx->rootPath = getRootPath(rootPath);
+
+        pwmRoot << ctx->rootPath;
+        pwmRoot << "/pwm" << std::to_string(node) <<"/";
         std::string pwmRootStr = pwmRoot.str();
+
+        ctx->node = node;
 
         ctx->periodPath =  pwmRootStr + "period";
         ctx->dutyCyclePath = pwmRootStr + "duty_cycle";
@@ -78,9 +90,7 @@ void Pwm::open(int idx) {
     const auto ctx = getCtx(idx);
     std::ostringstream openPath;
 
-    ALOGD("openPwm(chip:%d-node:%d)", ctx->chip, ctx->node);
-
-    openPath << "/sys/class/pwm/pwmchip" << std::to_string(ctx->chip) << "/";
+    openPath << ctx->rootPath << "/";
 
     writeSysfsTo(openPath.str() + "export", std::to_string(ctx->node));
 
@@ -93,8 +103,6 @@ void Pwm::close(int idx) {
     const auto ctx = getCtx(idx);
     ctx->period = 0;
     ctx->cycle_rate = 0;
-
-    ALOGD("closePwm(chip:%d-node:%d)", ctx->chip, ctx->node);
 
     writeSysfsTo(ctx->enablePath, "0");
     writeSysfsTo(ctx->dutyCyclePath, "0");
@@ -132,12 +140,4 @@ bool Pwm::setFrequency(int idx, double frequency_hz) {
     }
 
     return true;
-}
-
-std::string Pwm::getPwmChipPath(int chip) {
-    std::ostringstream pwmRoot;
-
-    pwmRoot << "/sys/class/pwm/pwmchip" << std::to_string(chip);
-
-    return pwmRoot.str();
 }
