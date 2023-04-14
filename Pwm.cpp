@@ -18,7 +18,6 @@
 
 #include "Pwm.h"
 #include "Helper.h"
-#include <cutils/log.h>
 #include <fstream>
 #include <sstream>
 #include <dirent.h>
