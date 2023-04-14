@@ -39,10 +39,14 @@ Pwm::Pwm(boardPtr board) {
 
 std::string Pwm::getRootPath(std::string path) {
     std::ostringstream pwmRoot;
-    pwmRoot << path << "/pwm";
+    pwmRoot << path << "/pwm/";
     struct dirent *root;
     DIR *dir = opendir(pwmRoot.str().c_str());
-    root = readdir(dir);
+    while ((root = readdir(dir)) != NULL) {
+        if (strcmp(root->d_name, ".") != 0 &&
+                strcmp(root->d_name, "..") != 0)
+            break;
+    }
     pwmRoot << "/" << root->d_name;
     closedir(dir);
 
