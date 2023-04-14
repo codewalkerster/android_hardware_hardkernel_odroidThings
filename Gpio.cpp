@@ -20,9 +20,10 @@
 #include <wiringPi/wiringPi.h>
 
 Gpio::Gpio(std::vector<pin_t> list) {
-    for(unsigned long i = 0; i<list.size(); i++)
-        if (list[i].availableModes & PIN_GPIO)
-            gpioList.insert(std::make_pair(i, list[i]));
+    for(auto pin = list.begin(); pin != list.end(); pin++) {
+        if (pin->availableModes & PIN_GPIO)
+            gpioList.insert(std::make_pair(atoi(pin->name.c_str()), *pin));
+    }
 }
 
 std::vector<std::string> Gpio::getList() {
