@@ -48,6 +48,7 @@ class PinManager {
             "C4",
             "HC4",
             "M1",
+            "M1S",
         };
 
         std::vector<i2c_t> i2cList;
