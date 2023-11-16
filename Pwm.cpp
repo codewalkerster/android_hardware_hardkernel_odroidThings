@@ -36,28 +36,17 @@ Pwm::Pwm(boardPtr board) {
                 pwmList.insert(std::make_pair(i, pinList[i]));
 }
 
-std::string Pwm::getRootPath(std::string path) {
-    std::ostringstream pwmRoot;
-    pwmRoot << path << "/pwm/";
-    struct dirent *root;
-    DIR *dir = opendir(pwmRoot.str().c_str());
-    while ((root = readdir(dir)) != NULL) {
-        if (strcmp(root->d_name, ".") != 0 &&
-                strcmp(root->d_name, "..") != 0)
-            break;
-    }
-    pwmRoot << "/" << root->d_name;
-    closedir(dir);
-
-    return pwmRoot.str();
-}
-
 void Pwm::initContext(int idx, std::string rootPath, uint8_t node) {
     const auto ctx = std::make_shared<pwmContext>();
+    std::ostringstream path;
+    path << rootPath << "/pwm/";
 
-    if (access(rootPath.c_str(), F_OK) == 0) {
+    if (access(path.str().c_str(), F_OK) == 0) {
         std::ostringstream pwmRoot;
-        ctx->rootPath = getRootPath(rootPath);
+        ctx->rootPath = getRootPath(path.str());
+
+        if (ctx->rootPath == "")
+            return;
 
         pwmRoot << ctx->rootPath;
         pwmRoot << "/pwm" << std::to_string(node) <<"/";
@@ -71,6 +60,26 @@ void Pwm::initContext(int idx, std::string rootPath, uint8_t node) {
 
         pwm.insert(std::make_pair(idx, ctx));
     }
+}
+
+std::string Pwm::getRootPath(std::string path) {
+    std::ostringstream pwmRoot;
+    pwmRoot << path;
+    struct dirent *root;
+    DIR *dir = opendir(path.c_str());
+
+    if (dir == NULL)
+        return "";
+
+    while ((root = readdir(dir)) != NULL) {
+        if (strcmp(root->d_name, ".") != 0 &&
+                strcmp(root->d_name, "..") != 0)
+            break;
+    }
+    pwmRoot << "/" << root->d_name;
+    closedir(dir);
+
+    return pwmRoot.str();
 }
 
 inline pwmCtxPtr Pwm::getCtx(int idx) {
