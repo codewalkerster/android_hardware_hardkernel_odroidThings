@@ -48,6 +48,7 @@ class PinManager {
             "C4",
             "HC4",
             "M1",
+            "M2",
             "M1S",
         };
 
