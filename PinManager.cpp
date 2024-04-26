@@ -18,6 +18,7 @@
 
 #include "OdroidC4.h"
 #include "OdroidM1.h"
+#include "OdroidM2.h"
 #include "OdroidM1S.h"
 #include "OdroidN2.h"
 #include "PinManager.h"
@@ -45,6 +46,8 @@ PinManager::PinManager(){
         board = std::make_shared<OdroidM1S>();
     else if (!name.compare(0, strlen("odroidm1"), "odroidm1"))
         board = std::make_shared<OdroidM1>();
+    else if (!name.compare(0, strlen("odroidm2"), "odroidm2"))
+        board = std::make_shared<OdroidM2>();
     else {
         board = std::make_shared<Board>(name);
         isUnknown= true;

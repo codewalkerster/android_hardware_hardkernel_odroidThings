@@ -28,6 +28,7 @@ cc_library_shared {
         "Board.cpp",
         "OdroidC4.cpp",
         "OdroidM1.cpp",
+        "OdroidM2.cpp",
         "OdroidM1S.cpp",
         "OdroidN2.cpp",
         "odroidThings.cpp",
