@@ -105,6 +105,7 @@ void UartCallback::unregisterCb() {
 
     destroyRingBuffer();
     setNonBlocking(false);
+    close(epfd);
     pthread_mutex_unlock(&mutex);
 }
 
@@ -122,17 +123,17 @@ int UartCallback::initEpoll() {
     struct epoll_event ev;
 
     epfd = epoll_create(EPOLL_MAX_CONN);
-    ev.events = EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP;
+    ev.events = EPOLLIN | EPOLLPRI;
     ev.data.fd = fd;
     return epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev);
 }
 
 #define MAX_EVENTS 128
 
-int UartCallback::wait(int mS) {
+int UartCallback::wait() {
     struct epoll_event events[MAX_EVENTS];
     int ret;
-    ret = epoll_wait(epfd, events, MAX_EVENTS, mS);
+    ret = epoll_wait(epfd, events, MAX_EVENTS, -1);
 
     if (callback == NULL) {
         ALOGE("call back is null!");
@@ -149,7 +150,10 @@ void UartCallback::doCallback(int count, char * buffer) {
     for (int i=0; i < count; i++) {
         auto length = ::read(fd, buffer, callbackBufferSize);
         if (length < 0) {
-            ALOGE("read Error : %s", strerror(errno));
+            if (errno != EAGAIN)
+                ALOGE("read Error : %s", strerror(errno));
+            else
+                ALOGE("Retry read!");
         } else {
             ring_buffer_queue_arr(readBuffer, buffer, length);
             callback();
@@ -159,7 +163,6 @@ void UartCallback::doCallback(int count, char * buffer) {
 
 void UartCallback::loop() {
     auto buffer = std::make_unique<char[]>(callbackBufferSize);
-    int timeout = 1000;
     int event_count;
 
     setMinInTimeout();
@@ -169,7 +172,7 @@ void UartCallback::loop() {
     }
 
     while (1) {
-        if ((event_count = wait(timeout)) >= 0) {
+        if ((event_count = wait()) >= 0) {
             pthread_mutex_lock(&mutex);
             doCallback(event_count, buffer.get());
             pthread_mutex_unlock(&mutex);

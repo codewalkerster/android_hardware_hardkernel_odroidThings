@@ -49,7 +49,7 @@ class UartCallback {
         void setMinInTimeout();
 
         int initEpoll();
-        int wait(int);
+        int wait();
         void doCallback(int, char*);
         void loop();
     public:
