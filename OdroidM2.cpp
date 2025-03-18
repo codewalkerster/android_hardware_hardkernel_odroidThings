@@ -59,6 +59,7 @@ OdroidM2::OdroidM2() {
         {"UART-3", "/dev/ttyS2", 4, 5}, // Pin #16, #18
         {"UART-4", "/dev/ttyS3", 31, 30}, // Pin #28, #27
         {"UART-5", "/dev/ttyS4", 21, 22}, // Pin #29, #31
+        {"UART-6", "/dev/ttyS5", -1, -1}, // Ext. Pin #12, #11
         {"UART-USB-0", "/dev/ttyUSB0", -1, -1},
         {"UART-USB-1", "/dev/ttyUSB1", -1, -1},
         {"UART-ACM-0", "/dev/ttyACM0", -1, -1},
