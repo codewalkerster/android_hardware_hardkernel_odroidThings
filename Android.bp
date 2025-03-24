@@ -27,6 +27,7 @@ cc_library_shared {
     srcs: [
         "Board.cpp",
         "OdroidC4.cpp",
+        "OdroidC5.cpp",
         "OdroidM1.cpp",
         "OdroidM2.cpp",
         "OdroidM1S.cpp",
