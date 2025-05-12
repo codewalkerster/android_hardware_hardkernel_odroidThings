@@ -48,7 +48,7 @@ OdroidC5::OdroidC5() {
         },
         { // Pin #26 f
             .index = 11,
-            .path =  "/sys/devices/platform/soc/ffd00000.cbus/fe058a00.pwm",
+            .path =  "/sys/devices/platform/soc/fe000000.cbus/fe058a00.pwm",
             .line = 0
         },
     };
